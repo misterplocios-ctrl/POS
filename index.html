@@ -132,6 +132,24 @@
             transform: scale(0.96);
         }
 
+        .pos-product-card {
+            transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .pos-product-card.is-pressing {
+            transform: scale(0.96);
+            border-color: var(--theme-accent);
+            box-shadow: 0 8px 22px rgba(74, 44, 24, 0.16);
+        }
+        @keyframes longPressPulse {
+            0% { transform: scale(0.96); box-shadow: 0 0 0 0 rgba(139, 90, 43, 0.45); }
+            60% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(139, 90, 43, 0); }
+            100% { transform: scale(0.99); box-shadow: 0 0 0 0 rgba(139, 90, 43, 0); }
+        }
+        .pos-product-card.is-long-pressed {
+            animation: longPressPulse 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+            border-color: var(--theme-primary);
+        }
+
         @keyframes slideUp {
             from { transform: translateY(100%); }
             to { transform: translateY(0); }
@@ -2023,7 +2041,7 @@
                     : `<div class="w-full h-28 flex items-center justify-center text-4xl bg-cafe-surface/60">${p.emoji || '☕'}</div>`;
 
                 return `
-                    <div class="bg-white rounded-2xl border border-cafe-border shadow-cafe overflow-hidden flex flex-col justify-between">
+                    <div data-product-id="${p.id}" style="touch-action: manipulation;" class="pos-product-card bg-white rounded-2xl border border-cafe-border shadow-cafe overflow-hidden flex flex-col justify-between cursor-pointer">
                         <div>
                             <div class="relative bg-cafe-bg/50">
                                 ${mediaHtml}
@@ -2041,7 +2059,7 @@
 
                         <div class="px-3 pb-3 pt-1 flex items-center justify-between gap-2">
                             <span class="font-sans text-sm font-extrabold text-cafe-espresso tabular-nums">${formatPHPShort(p.price)}</span>
-                            <button type="button" ${isOut ? 'disabled' : `onclick="addToCart('${p.id}')"`}
+                            <button type="button" data-add-btn="true" ${isOut ? 'disabled' : `onclick="addToCart('${p.id}')"`}
                                 class="px-2.5 py-1.5 rounded-full text-[11px] font-bold tap-scale flex items-center gap-1 ${
                                     isOut
                                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -2055,7 +2073,121 @@
                 `;
             }).join('');
 
+            bindPOSGridLongPress();
             safeCreateIcons();
+        }
+
+        function bindPOSGridLongPress() {
+            const cards = document.querySelectorAll('#pos-grid .pos-product-card');
+            cards.forEach(card => {
+                let pressTimer = null;
+                let startX = 0;
+                let startY = 0;
+                let longPressed = false;
+                const productId = card.getAttribute('data-product-id');
+
+                const triggerHapticFeedback = () => {
+                    try {
+                        if (navigator.vibrate) {
+                            navigator.vibrate([18, 12, 26]);
+                        }
+                    } catch (_) {}
+
+                    try {
+                        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                        if (AudioCtx) {
+                            const ctx = new AudioCtx();
+                            const osc = ctx.createOscillator();
+                            const gain = ctx.createGain();
+                            osc.type = 'sine';
+                            osc.frequency.setValueAtTime(520, ctx.currentTime);
+                            osc.frequency.exponentialRampToValueAtTime(780, ctx.currentTime + 0.055);
+                            gain.gain.setValueAtTime(0.05, ctx.currentTime);
+                            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.06);
+                            osc.connect(gain);
+                            gain.connect(ctx.destination);
+                            osc.start();
+                            osc.stop(ctx.currentTime + 0.065);
+                            setTimeout(() => ctx.close().catch(() => {}), 120);
+                        }
+                    } catch (_) {}
+                };
+
+                const clearPress = () => {
+                    if (pressTimer) {
+                        clearTimeout(pressTimer);
+                        pressTimer = null;
+                    }
+                    card.classList.remove('is-pressing');
+                };
+
+                const startPress = (x, y, target) => {
+                    if (!productId) return;
+                    if (target && target.closest('button[data-add-btn="true"]')) return;
+                    longPressed = false;
+                    startX = x;
+                    startY = y;
+                    clearPress();
+                    card.classList.add('is-pressing');
+                    pressTimer = setTimeout(() => {
+                        longPressed = true;
+                        card.classList.remove('is-pressing');
+                        card.classList.add('is-long-pressed');
+                        setTimeout(() => card.classList.remove('is-long-pressed'), 340);
+                        triggerHapticFeedback();
+                        openProductModal(productId);
+                    }, 520);
+                };
+
+                const movePress = (x, y) => {
+                    if (!pressTimer) return;
+                    if (Math.abs(x - startX) > 12 || Math.abs(y - startY) > 12) {
+                        clearPress();
+                    }
+                };
+
+                card.addEventListener('touchstart', (e) => {
+                    if (!e.touches || !e.touches[0]) return;
+                    startPress(e.touches[0].clientX, e.touches[0].clientY, e.target);
+                }, { passive: true });
+
+                card.addEventListener('touchmove', (e) => {
+                    if (!e.touches || !e.touches[0]) return;
+                    movePress(e.touches[0].clientX, e.touches[0].clientY);
+                }, { passive: true });
+
+                card.addEventListener('touchend', clearPress, { passive: true });
+                card.addEventListener('touchcancel', clearPress, { passive: true });
+
+                card.addEventListener('mousedown', (e) => {
+                    if (e.button !== 0) return;
+                    startPress(e.clientX, e.clientY, e.target);
+                });
+
+                card.addEventListener('mousemove', (e) => {
+                    movePress(e.clientX, e.clientY);
+                });
+
+                card.addEventListener('mouseup', clearPress);
+                card.addEventListener('mouseleave', clearPress);
+                card.addEventListener('contextmenu', (e) => {
+                    if (productId && !(e.target && e.target.closest('button[data-add-btn="true"]'))) {
+                        e.preventDefault();
+                        card.classList.remove('is-pressing');
+                        card.classList.add('is-long-pressed');
+                        setTimeout(() => card.classList.remove('is-long-pressed'), 340);
+                        triggerHapticFeedback();
+                        openProductModal(productId);
+                    }
+                });
+                card.addEventListener('click', (e) => {
+                    if (longPressed) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        longPressed = false;
+                    }
+                }, true);
+            });
         }
 
         // ==================== CART & CHECKOUT ====================
