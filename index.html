@@ -458,6 +458,17 @@
                         <p id="gcash-today-cashout" class="font-sans text-base font-extrabold text-cafe-text mt-0.5 tabular-nums">₱0.00</p>
                     </div>
                 </div>
+
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div class="bg-green-50/70 p-3 rounded-xl border border-green-200/70">
+                        <p class="text-[11px] font-semibold text-cafe-green">Total Fee This Week</p>
+                        <p id="gcash-week-fee" class="font-sans text-base font-extrabold text-cafe-green mt-0.5 tabular-nums">+₱0.00</p>
+                    </div>
+                    <div class="bg-green-50/70 p-3 rounded-xl border border-green-200/70">
+                        <p class="text-[11px] font-semibold text-cafe-green">Total Fee This Month</p>
+                        <p id="gcash-month-fee" class="font-sans text-base font-extrabold text-cafe-green mt-0.5 tabular-nums">+₱0.00</p>
+                    </div>
+                </div>
             </div>
 
             <!-- Add Daily GCash Transaction Form -->
@@ -1761,6 +1772,13 @@
             return d >= sevenDaysAgo;
         }
 
+        function isThisMonth(dateStr) {
+            if (!dateStr) return false;
+            const d = new Date(dateStr);
+            const now = new Date();
+            return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        }
+
         function formatDateTime(dateStr) {
             if (!dateStr) return '';
             const d = new Date(dateStr);
@@ -2784,18 +2802,27 @@
             let todayCashIn = 0;
             let todayCashOut = 0;
             let todayFee = 0;
+            let weekFee = 0;
+            let monthFee = 0;
 
             entries.forEach(e => {
+                const feeVal = Number(e.fee || 0);
+                if (isWithinLast7Days(e.date)) weekFee += feeVal;
+                if (isThisMonth(e.date)) monthFee += feeVal;
                 if (!isToday(e.date)) return;
                 if (e.type === 'Cash-Out') todayCashOut += Number(e.amount || 0);
                 else todayCashIn += Number(e.amount || 0);
-                todayFee += Number(e.fee || 0);
+                todayFee += feeVal;
             });
 
             const feeEl = document.getElementById('gcash-today-fee');
+            const weekFeeEl = document.getElementById('gcash-week-fee');
+            const monthFeeEl = document.getElementById('gcash-month-fee');
             const inEl = document.getElementById('gcash-today-cashin');
             const outEl = document.getElementById('gcash-today-cashout');
             if (feeEl) feeEl.textContent = `Today Fee: +${formatPHP(todayFee)}`;
+            if (weekFeeEl) weekFeeEl.textContent = `+${formatPHP(weekFee)}`;
+            if (monthFeeEl) monthFeeEl.textContent = `+${formatPHP(monthFee)}`;
             if (inEl) inEl.textContent = formatPHP(todayCashIn);
             if (outEl) outEl.textContent = formatPHP(todayCashOut);
 
