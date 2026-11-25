@@ -137,7 +137,6 @@
             </button>
 
             <!-- Center Brand Title (Matching Brew & Bliss Reference) -->
-            <!-- Center Brand Title -->
             <div onclick="switchTab('pos')" class="text-center cursor-pointer">
                 <div class="flex justify-center mb-0.5 text-cafe-espresso">
                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -185,9 +184,13 @@
                 <div class="relative flex-1">
                     <i data-lucide="search" class="w-4 h-4 text-cafe-muted absolute left-4 top-1/2 -translate-y-1/2"></i>
                     <input type="text" id="pos-search" placeholder="Search coffee, snacks, goods & more..." 
-                        class="w-full bg-white text-[15px] text-cafe-text placeholder:text-cafe-muted/70 rounded-full pl-10 pr-9 py-2.5 outline-none border border-cafe-border shadow-cafe focus:border-cafe-espresso transition-all">
-                    <button id="pos-search-clear" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-cafe-muted p-1">
+                        class="w-full bg-white text-[15px] text-cafe-text placeholder:text-cafe-muted/70 rounded-full pl-10 pr-16 py-2.5 outline-none border border-cafe-border shadow-cafe focus:border-cafe-espresso transition-all">
+                    <button id="pos-search-clear" class="hidden absolute right-9 top-1/2 -translate-y-1/2 text-cafe-muted p-1">
                         <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button type="button" onclick="openBarcodeScanner('pos')" title="Scan Barcode" aria-label="Scan Barcode"
+                        class="absolute right-2.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-cafe-surface hover:bg-cafe-latte/60 text-cafe-espresso flex items-center justify-center tap-scale">
+                        <i data-lucide="scan-barcode" class="w-4 h-4"></i>
                     </button>
                 </div>
                 <button id="pos-stock-filter-btn" onclick="cyclePOSStockFilter()" title="Filter stock status"
@@ -198,35 +201,18 @@
             </div>
 
             <!-- Dark Espresso Hero Banner Card (Matching "Good Coffee / Good Vibes") -->
-            <div class="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#231208] via-[#3A1F10] to-[#59331B] text-white p-5 shadow-cafe-lg">
-                <!-- Decorative Coffee Cup & Beans Vector Illustration on Right -->
-                <div class="absolute right-[-14px] bottom-[-14px] w-44 h-44 opacity-95 pointer-events-none">
-                    <svg viewBox="0 0 200 200" class="w-full h-full">
-                        <defs>
-                            <radialGradient id="cupGlow" cx="50%" cy="50%" r="50%">
-                                <stop offset="0%" stop-color="#D9A066" stop-opacity="0.35"/>
-                                <stop offset="100%" stop-color="#231208" stop-opacity="0"/>
-                            </radialGradient>
-                        </defs>
-                        <circle cx="110" cy="105" r="85" fill="url(#cupGlow)"/>
-                        <!-- Saucer -->
-                        <ellipse cx="112" cy="148" rx="68" ry="20" fill="#D8C7B8"/>
-                        <ellipse cx="112" cy="145" rx="54" ry="14" fill="#BCA694"/>
-                        <!-- Cup Body -->
-                        <path d="M62 88 C62 135, 162 135, 162 88 Z" fill="#EFE4D8"/>
-                        <path d="M158 95 C178 95, 178 122, 155 124" fill="none" stroke="#EFE4D8" stroke-width="8" stroke-linecap="round"/>
-                        <!-- Latte Art Top -->
-                        <ellipse cx="112" cy="88" rx="50" ry="16" fill="#8C5327"/>
-                        <path d="M112 79 C104 83, 104 93, 112 97 C120 93, 120 83, 112 79 Z" fill="#F7EFE6"/>
-                        <path d="M112 83 C108 86, 108 91, 112 94 C116 91, 116 86, 112 83 Z" fill="#8C5327"/>
-                        <!-- Roasted Coffee Beans -->
-                        <ellipse cx="52" cy="154" rx="8" ry="5" transform="rotate(-25 52 154)" fill="#3E1E0E"/>
-                        <ellipse cx="70" cy="162" rx="7" ry="4.5" transform="rotate(15 70 162)" fill="#4D2612"/>
-                        <ellipse cx="156" cy="160" rx="8" ry="5" transform="rotate(-15 156 160)" fill="#3E1E0E"/>
-                    </svg>
+            <div id="hero-banner-card" class="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#231208] via-[#3A1F10] to-[#59331B] text-white p-5 shadow-cafe-lg transition-all duration-300">
+                <!-- Dynamic Best-Selling Product Image Showcase on Right -->
+                <div id="hero-bestseller-visual" class="absolute right-3 top-3 bottom-3 w-32 sm:w-36 rounded-2xl overflow-hidden border border-amber-200/25 bg-[#2A160B]/80 shadow-cafe-lg flex items-center justify-center pointer-events-none">
+                    <img id="hero-bestseller-img" src="" alt="Top Selling Product" class="w-full h-full object-cover hidden">
+                    <span id="hero-bestseller-emoji" class="text-5xl">☕</span>
+                    <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent p-2 text-left">
+                        <p id="hero-bestseller-tag" class="text-[9px] font-extrabold uppercase tracking-wider text-amber-300">MABENTA NGAYON</p>
+                        <p id="hero-bestseller-name" class="text-[11px] font-bold text-white leading-tight truncate">Nescafe Twin Pack</p>
+                    </div>
                 </div>
 
-                <div class="relative z-10 max-w-[65%]">
+                <div class="relative z-10 max-w-[60%] sm:max-w-[63%]">
                     <p id="hero-kicker" class="font-sans font-semibold text-amber-200 text-[13px] tracking-wide uppercase">Today's Store Pulse</p>
                     <h2 id="hero-headline" class="font-sans text-[27px] font-extrabold leading-[1.15] tracking-tight mt-0.5">Good Stock,<br>Great Sales</h2>
                     <p id="hero-subtext" class="text-xs text-amber-100/90 mt-1.5 leading-relaxed tabular-nums">
@@ -277,7 +263,7 @@
             </div>
 
             <!-- Bottom Promo / Inventory Valuation Summary Card (Matching "WEEKEND SPECIAL / 20% OFF" Banner) -->
-            <div onclick="switchTab('inventory')" class="relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#EFE3D6] via-[#E8D7C5] to-[#DFC8B2] border border-cafe-border p-4 flex items-center justify-between gap-3 cursor-pointer tap-scale shadow-cafe">
+            <div id="valuation-banner-card" onclick="switchTab('inventory')" class="relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#EFE3D6] via-[#E8D7C5] to-[#DFC8B2] border border-cafe-border p-4 flex items-center justify-between gap-3 cursor-pointer tap-scale shadow-cafe transition-all duration-300">
                 <div class="z-10">
                     <p class="text-[11px] font-bold tracking-wider uppercase text-cafe-caramel">INVENTORY VALUATION</p>
                     <p id="banner-inv-retail" class="font-sans text-2xl font-extrabold text-cafe-text leading-tight mt-0.5 tabular-nums">₱0.00</p>
@@ -293,7 +279,7 @@
                 </div>
 
                 <!-- Circular Profit Badge on Right (Matching "20% OFF" Circle) -->
-                <div class="w-20 h-20 rounded-full bg-cafe-espresso text-white flex flex-col items-center justify-center text-center p-2 shrink-0 shadow-md border-2 border-white/40 tabular-nums">
+                <div id="valuation-profit-badge" class="w-20 h-20 rounded-full bg-cafe-espresso text-white flex flex-col items-center justify-center text-center p-2 shrink-0 shadow-md border-2 border-white/40 tabular-nums transition-colors duration-300">
                     <span class="text-[10px] uppercase tracking-wider text-amber-200 font-semibold">Est. Kita</span>
                     <span id="banner-inv-profit" class="text-xs font-extrabold leading-tight mt-0.5">+₱0</span>
                 </div>
@@ -736,6 +722,19 @@
                     </div>
 
                     <div>
+                        <label class="text-xs font-bold text-cafe-muted block mb-1">Barcode / SKU (Optional)</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="prod-barcode" placeholder="e.g., 4800016644012"
+                                class="flex-1 bg-cafe-bg rounded-xl px-3.5 py-2 text-xs font-semibold border border-cafe-border outline-none focus:border-cafe-espresso">
+                            <button type="button" onclick="openBarcodeScanner('product')"
+                                class="px-3 py-2 bg-cafe-surface text-cafe-espresso rounded-xl text-xs font-bold border border-cafe-border flex items-center gap-1 tap-scale shrink-0">
+                                <i data-lucide="scan-barcode" class="w-4 h-4"></i>
+                                <span>Scan</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
                         <div class="flex items-center justify-between mb-1">
                             <label class="text-xs font-bold text-cafe-muted">Category *</label>
                             <button type="button" onclick="toggleNewCategoryInput()" class="text-xs font-bold text-cafe-caramel">+ New Category</button>
@@ -817,6 +816,42 @@
         </div>
     </div>
 
+    <!-- ==================== MODAL 5: BARCODE SCANNER ==================== -->
+    <div id="barcode-modal" class="hidden fixed inset-0 z-50 bg-black/55 backdrop-blur-xs flex items-end justify-center">
+        <div class="bg-cafe-bg w-full max-w-xl rounded-t-3xl max-h-[90vh] flex flex-col animate-slide-up overflow-hidden">
+            <div class="bg-white px-4 py-3.5 border-b border-cafe-border flex items-center justify-between shrink-0">
+                <span id="scanner-mode-label" class="text-xs font-bold text-cafe-caramel uppercase tracking-wider">POS Scan</span>
+                <h2 class="font-sans text-lg font-extrabold text-cafe-text">Barcode Scanner</h2>
+                <button type="button" onclick="closeBarcodeScanner()" class="w-8 h-8 bg-cafe-bg rounded-full flex items-center justify-center text-cafe-text">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div class="p-4 overflow-y-auto space-y-3.5">
+                <div class="relative rounded-2xl overflow-hidden bg-cafe-espressoDark aspect-[4/3] flex items-center justify-center border border-cafe-border">
+                    <video id="barcode-video" autoplay playsinline muted class="w-full h-full object-cover"></video>
+                    <div id="scanner-overlay" class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+                        <div class="w-56 h-32 border-2 border-amber-300/90 rounded-2xl shadow-[0_0_0_999px_rgba(0,0,0,0.28)]"></div>
+                        <p id="scanner-status" class="mt-3 text-xs font-semibold text-white bg-black/60 px-3 py-1 rounded-full">
+                            Align barcode inside frame or type below
+                        </p>
+                    </div>
+                </div>
+
+                <form onsubmit="event.preventDefault(); submitManualBarcode();" class="bg-white rounded-2xl p-3.5 border border-cafe-border shadow-cafe space-y-2.5">
+                    <label class="text-xs font-bold text-cafe-text block">Barcode / Manual Entry</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="manual-barcode-input" placeholder="Scan with USB scanner or enter code..."
+                            class="flex-1 bg-cafe-bg rounded-xl px-3.5 py-2.5 text-sm font-semibold border border-cafe-border outline-none focus:border-cafe-espresso">
+                        <button type="submit" class="px-4 py-2.5 bg-cafe-espresso text-white rounded-xl text-xs font-bold tap-scale shrink-0">
+                            Apply
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- ==================== JAVASCRIPT APPLICATION LOGIC ==================== -->
     <script>
         const STORAGE_KEYS = {
@@ -827,8 +862,10 @@
             SYNC_CONFIG: 'sari_sari_pos_sync_config_v1'
         };
 
-        const SYNC_BUCKET_BASE = 'https://kvdb.io/A9xK7mP2qL5vN8wR3tY6zB1c/';
-
+        const SYNC_API_ENDPOINT = 'https://api.jsonblob.com/api/jsonBlob';
+        const SYNC_KV_BASE = 'https://keyvalue.immanuel.co/api/v1';
+        const SYNC_NPOINT_BASE = 'https://api.npoint.io';
+        const SYNC_KVDB_BASE = 'https://kvdb.io/A9xK7mP2qL5vN8w3R7tY';
         const DEFAULT_CATEGORIES = [
             'Beverages & Coffee',
             'Canned Goods',
@@ -856,14 +893,14 @@
         }
 
         const SAMPLE_PRODUCTS = [
-            { id: 'p1', name: 'Nescafe Twin Pack', desc: 'Creamy white 3-in-1 instant coffee sachet', category: 'Beverages & Coffee', price: 15, cost: 11.50, stock: 40, threshold: 10, badge: 'BESTSELLER', emoji: '☕', image: makeArtSVG('#3A1F10', '#6E4226', '☕', '#F5D0A9') },
-            { id: 'p2', name: 'Coke Mismo 295ml', desc: 'Chilled classic soft drink bottle', category: 'Beverages & Coffee', price: 18, cost: 14, stock: 24, threshold: 6, badge: 'POPULAR', emoji: '🥤', image: makeArtSVG('#4A2C18', '#8B5A2B', '🥤', '#FFE4C4') },
-            { id: 'p3', name: 'CDO Karne Norte 150g', desc: 'Classic corned beef pantry staple', category: 'Canned Goods', price: 38, cost: 31.50, stock: 16, threshold: 5, badge: "CHEF'S PICK", emoji: '🥫', image: makeArtSVG('#4E1E16', '#8C3B2B', '🥫', '#FADBD8') },
-            { id: 'p4', name: 'Lucky Me Pancit Canton', desc: 'Sweet & Spicy instant noodles pack', category: 'Instant Noodles', price: 16, cost: 12.50, stock: 4, threshold: 8, badge: 'LOW STOCK', emoji: '🍜', image: makeArtSVG('#6E4226', '#B87D4B', '🍜', '#FFF0DB') },
-            { id: 'p5', name: 'SkyFlakes Crackers', desc: 'Crispy salted biscuit pack', category: 'Snacks & Biscuits', price: 9, cost: 6.50, stock: 22, threshold: 6, badge: 'POPULAR', emoji: '🍪', image: makeArtSVG('#4A321F', '#8C6239', '🍪', '#F4E2D0') },
-            { id: 'p6', name: 'Datu Puti Toyo 200ml', desc: 'Classic Filipino soy sauce bottle', category: 'Condiments', price: 16, cost: 12, stock: 18, threshold: 5, badge: 'SARI-SARI', emoji: '🫙', image: makeArtSVG('#2C1810', '#5C3824', '🫙', '#E6B89C') },
-            { id: 'p7', name: 'Safeguard White Bar', desc: 'Germ protection bath soap bar', category: 'Bath & Laundry', price: 26, cost: 21, stock: 14, threshold: 5, badge: 'SARI-SARI', emoji: '🧼', image: makeArtSVG('#3B2314', '#7D4E2D', '🧼', '#F5CBA7') },
-            { id: 'p8', name: 'Mongol Pencil No. 2', desc: 'Classic graphite pencil for school', category: 'School & Load', price: 12, cost: 8.50, stock: 3, threshold: 5, badge: 'LOW STOCK', emoji: '✏️', image: makeArtSVG('#5C3A21', '#9C6B43', '✏️', '#F7E7D7') }
+            { id: 'p1', name: 'Nescafe Twin Pack', desc: 'Creamy white 3-in-1 instant coffee sachet', barcode: '4800016644012', category: 'Beverages & Coffee', price: 15, cost: 11.50, stock: 40, threshold: 10, badge: 'BESTSELLER', emoji: '☕', image: makeArtSVG('#3A1F10', '#6E4226', '☕', '#F5D0A9') },
+            { id: 'p2', name: 'Coke Mismo 295ml', desc: 'Chilled classic soft drink bottle', barcode: '5449000000996', category: 'Beverages & Coffee', price: 18, cost: 14, stock: 24, threshold: 6, badge: 'POPULAR', emoji: '🥤', image: makeArtSVG('#4A2C18', '#8B5A2B', '🥤', '#FFE4C4') },
+            { id: 'p3', name: 'CDO Karne Norte 150g', desc: 'Classic corned beef pantry staple', barcode: '4800888111223', category: 'Canned Goods', price: 38, cost: 31.50, stock: 16, threshold: 5, badge: "CHEF'S PICK", emoji: '🥫', image: makeArtSVG('#4E1E16', '#8C3B2B', '🥫', '#FADBD8') },
+            { id: 'p4', name: 'Lucky Me Pancit Canton', desc: 'Sweet & Spicy instant noodles pack', barcode: '4807770270415', category: 'Instant Noodles', price: 16, cost: 12.50, stock: 4, threshold: 8, badge: 'LOW STOCK', emoji: '🍜', image: makeArtSVG('#6E4226', '#B87D4B', '🍜', '#FFF0DB') },
+            { id: 'p5', name: 'SkyFlakes Crackers', desc: 'Crispy salted biscuit pack', barcode: '4800010075102', category: 'Snacks & Biscuits', price: 9, cost: 6.50, stock: 22, threshold: 6, badge: 'POPULAR', emoji: '🍪', image: makeArtSVG('#4A321F', '#8C6239', '🍪', '#F4E2D0') },
+            { id: 'p6', name: 'Datu Puti Toyo 200ml', desc: 'Classic Filipino soy sauce bottle', barcode: '4800011223344', category: 'Condiments', price: 16, cost: 12, stock: 18, threshold: 5, badge: 'SARI-SARI', emoji: '🫙', image: makeArtSVG('#2C1810', '#5C3824', '🫙', '#E6B89C') },
+            { id: 'p7', name: 'Safeguard White Bar', desc: 'Germ protection bath soap bar', barcode: '4902430887766', category: 'Bath & Laundry', price: 26, cost: 21, stock: 14, threshold: 5, badge: 'SARI-SARI', emoji: '🧼', image: makeArtSVG('#3B2314', '#7D4E2D', '🧼', '#F5CBA7') },
+            { id: 'p8', name: 'Mongol Pencil No. 2', desc: 'Classic graphite pencil for school', barcode: '4806502119988', category: 'School & Load', price: 12, cost: 8.50, stock: 3, threshold: 5, badge: 'LOW STOCK', emoji: '✏️', image: makeArtSVG('#5C3A21', '#9C6B43', '✏️', '#F7E7D7') }
         ];
 
         const CATEGORY_ICONS = {
@@ -878,12 +915,13 @@
         };
 
         const EMOJI_OPTIONS = ['☕', '🥤', '🥫', '🍜', '🍪', '🫙', '🧼', '✏️', '🥚', '🍚', '🧂', '🍬', '🧴', '🧺', '📱', '🧊'];
+
         let state = {
             products: [],
             categories: [],
             transactions: [],
             branding: { name: 'Sari-Sari', sub: 'STORE & POS' },
-            sync: { enabled: true, key: '', lastSynced: null },
+            sync: { enabled: true, key: '', blobId: null, updatedAt: 0, lastSynced: null },
             cart: [],
             activeTab: 'pos',
             selectedCategory: 'All',
@@ -901,6 +939,156 @@
         let syncPushTimer = null;
         let syncPollInterval = null;
         let isSyncing = false;
+        let pendingPushAfterSync = false;
+        let lastAdaptiveColorKey = '';
+
+        function extractDominantColorFromImage(src, emojiFallback = '☕') {
+            return new Promise((resolve) => {
+                const fallbackFromEmoji = {
+                    '🥤': { r: 166, g: 38, b: 38 },
+                    '🥫': { r: 168, g: 46, b: 36 },
+                    '🍜': { r: 196, g: 112, b: 28 },
+                    '🧼': { r: 34, g: 139, b: 92 },
+                    '🌿': { r: 34, g: 139, b: 69 },
+                    '🍵': { r: 46, g: 125, b: 50 },
+                    '🥬': { r: 46, g: 125, b: 50 },
+                    '🍏': { r: 67, g: 160, b: 71 },
+                    '☕': { r: 92, g: 54, b: 30 }
+                };
+                const defaultRgb = fallbackFromEmoji[emojiFallback] || { r: 74, g: 44, b: 24 };
+
+                if (!src) {
+                    resolve(defaultRgb);
+                    return;
+                }
+
+                try {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.onload = function() {
+                        try {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = 36;
+                            canvas.height = 36;
+                            const ctx = canvas.getContext('2d');
+                            if (!ctx) {
+                                resolve(defaultRgb);
+                                return;
+                            }
+                            ctx.drawImage(img, 0, 0, 36, 36);
+                            const data = ctx.getImageData(0, 0, 36, 36).data;
+
+                            let rSum = 0, gSum = 0, bSum = 0, count = 0;
+                            let satR = 0, satG = 0, satB = 0, satCount = 0;
+
+                            for (let i = 0; i < data.length; i += 4) {
+                                const a = data[i + 3];
+                                if (a < 128) continue;
+                                const r = data[i];
+                                const g = data[i + 1];
+                                const b = data[i + 2];
+                                const max = Math.max(r, g, b);
+                                const min = Math.min(r, g, b);
+                                const sat = max === 0 ? 0 : (max - min) / max;
+
+                                // Skip near-white or near-black background pixels when possible
+                                if (max > 242 && min > 235) continue;
+                                if (max < 18) continue;
+
+                                rSum += r; gSum += g; bSum += b; count++;
+
+                                if (sat > 0.25) {
+                                    satR += r; satG += g; satB += b; satCount++;
+                                }
+                            }
+
+                            if (satCount >= 6) {
+                                resolve({
+                                    r: Math.round(satR / satCount),
+                                    g: Math.round(satG / satCount),
+                                    b: Math.round(satB / satCount)
+                                });
+                            } else if (count > 0) {
+                                resolve({
+                                    r: Math.round(rSum / count),
+                                    g: Math.round(gSum / count),
+                                    b: Math.round(bSum / count)
+                                });
+                            } else {
+                                resolve(defaultRgb);
+                            }
+                        } catch (_) {
+                            resolve(defaultRgb);
+                        }
+                    };
+                    img.onerror = function() {
+                        resolve(defaultRgb);
+                    };
+                    img.src = src;
+                } catch (_) {
+                    resolve(defaultRgb);
+                }
+            });
+        }
+
+        function clampChannel(val) {
+            return Math.max(0, Math.min(255, Math.round(val)));
+        }
+
+        function rgbCss(r, g, b, alpha = 1) {
+            const cr = clampChannel(r), cg = clampChannel(g), cb = clampChannel(b);
+            return alpha < 1 ? `rgba(${cr}, ${cg}, ${cb}, ${alpha})` : `rgb(${cr}, ${cg}, ${cb})`;
+        }
+
+        async function applyAdaptiveColorFromHero(topProduct) {
+            if (!topProduct) return;
+            const cacheKey = `${topProduct.id}|${topProduct.emoji || ''}|${(topProduct.image || '').slice(0, 64)}`;
+            if (cacheKey === lastAdaptiveColorKey) return;
+            lastAdaptiveColorKey = cacheKey;
+
+            const { r, g, b } = await extractDominantColorFromImage(topProduct.image, topProduct.emoji);
+
+            const darkR = r * 0.36, darkG = g * 0.36, darkB = b * 0.36;
+            const midR = r * 0.58, midG = g * 0.58, midB = b * 0.58;
+            const deepR = r * 0.24, deepG = g * 0.24, deepB = b * 0.24;
+
+            const soft1R = 255 - (255 - r) * 0.14;
+            const soft1G = 255 - (255 - g) * 0.14;
+            const soft1B = 255 - (255 - b) * 0.14;
+
+            const soft2R = 255 - (255 - r) * 0.24;
+            const soft2G = 255 - (255 - g) * 0.24;
+            const soft2B = 255 - (255 - b) * 0.24;
+
+            const heroCard = document.getElementById('hero-banner-card');
+            if (heroCard) {
+                heroCard.style.backgroundImage = `linear-gradient(135deg, ${rgbCss(deepR, deepG, deepB)} 0%, ${rgbCss(darkR, darkG, darkB)} 52%, ${rgbCss(midR, midG, midB)} 100%)`;
+            }
+
+            const valCard = document.getElementById('valuation-banner-card');
+            if (valCard) {
+                valCard.style.backgroundImage = `linear-gradient(90deg, ${rgbCss(soft1R, soft1G, soft1B)} 0%, ${rgbCss(soft2R, soft2G, soft2B)} 100%)`;
+                valCard.style.borderColor = rgbCss(r, g, b, 0.28);
+            }
+
+            const valBadge = document.getElementById('valuation-profit-badge');
+            if (valBadge) {
+                valBadge.style.backgroundColor = rgbCss(darkR, darkG, darkB);
+            }
+
+            const navCart = document.getElementById('nav-cart');
+            if (navCart) {
+                navCart.style.backgroundColor = rgbCss(darkR, darkG, darkB);
+            }
+
+            const activeNav = document.querySelector('.nav-btn.text-cafe-espresso');
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.style.color = '';
+            });
+            if (activeNav) {
+                activeNav.style.color = rgbCss(darkR, darkG, darkB);
+            }
+        }
 
         function createRandomSyncKey() {
             const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
@@ -934,36 +1122,89 @@
 
             if (!state.sync.enabled) {
                 updateSyncStatusUI('Auto Sync Off', 'text-cafe-muted');
+            } else if (!navigator.onLine) {
+                updateSyncStatusUI('Offline • Local saved', 'text-cafe-orange');
             } else if (state.sync.lastSynced) {
                 const t = new Date(state.sync.lastSynced).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' });
-                updateSyncStatusUI(`Synced ${t}`, 'text-cafe-green');
+                updateSyncStatusUI(`Online • Synced ${t}`, 'text-cafe-green');
             } else {
-                updateSyncStatusUI('Ready', 'text-cafe-caramel');
+                updateSyncStatusUI('Local saved • Ready', 'text-cafe-caramel');
             }
         }
 
-        function generateNewSyncKey() {
-            state.sync.key = createRandomSyncKey();
-            state.sync.enabled = true;
-            saveSyncConfig();
-            applySyncUI();
-            scheduleCloudPush();
-            showToast('New Sync Key generated!');
+        // Encode/decode full store snapshot into a portable Sync Code for cross-phone transfer
+        function encodeSyncCode() {
+            const snapshot = {
+                syncKey: state.sync.key,
+                updatedAt: state.sync.updatedAt || Date.now(),
+                branding: state.branding,
+                products: state.products,
+                categories: state.categories,
+                transactions: state.transactions
+            };
+            const jsonStr = JSON.stringify(snapshot);
+            const bytes = new TextEncoder().encode(jsonStr);
+            let binary = '';
+            for (let i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return 'SS1-' + btoa(binary);
         }
 
-        function copySyncKey() {
-            const key = (document.getElementById('sync-key-input')?.value || state.sync.key || '').trim();
-            if (!key) return;
+        function applySyncCode(rawCode) {
+            const cleaned = (rawCode || '').trim();
+            if (!cleaned.startsWith('SS1-')) return false;
+            const b64 = cleaned.slice(4);
+            const binary = atob(b64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            const jsonStr = new TextDecoder().decode(bytes);
+            const remote = JSON.parse(jsonStr);
+            if (!remote || !Array.isArray(remote.products) || !Array.isArray(remote.transactions)) {
+                return false;
+            }
+
+            const remoteUpdated = Number(remote.updatedAt || Date.now());
+            state.transactions = mergeTransactions(state.transactions, remote.transactions);
+            state.categories = mergeCategories(state.categories, remote.categories);
+            state.products = remote.products;
+            if (remote.branding && remote.branding.name) {
+                state.branding = remote.branding;
+            }
+            if (remote.syncKey) {
+                state.sync.key = remote.syncKey;
+            }
+            state.sync.updatedAt = Math.max(remoteUpdated, Date.now());
+            state.sync.lastSynced = new Date().toISOString();
+
+            saveProducts();
+            saveCategories();
+            saveTransactions();
+            saveBranding();
+            saveSyncConfig();
+            applyBrandingUI();
+            applySyncUI();
+            renderAll();
+            lucide.createIcons();
+            return true;
+        }
+
+        function copySyncCode() {
             try {
+                const code = encodeSyncCode();
                 const temp = document.createElement('textarea');
-                temp.value = key;
+                temp.value = code;
                 document.body.appendChild(temp);
                 temp.select();
                 document.execCommand('copy');
                 document.body.removeChild(temp);
-                showToast('Sync Key copied!');
+                updateSyncStatusUI('Sync Code copied • Ready for other phone', 'text-cafe-green');
+                showToast('Sync Code copied! Paste in Sync Key on other phone');
             } catch (err) {
-                showToast('Copy key from box', 'info', 'text-amber-300');
+                console.error('Copy sync code error:', err);
+                showToast('Could not generate Sync Code', 'alert-circle', 'text-red-300');
             }
         }
 
@@ -976,80 +1217,276 @@
             }
         }
 
-        function getSyncUrl() {
-            const key = (state.sync.key || '').trim().replace(/[^a-zA-Z0-9_-]/g, '');
-            if (!key) return null;
-            return `${SYNC_BUCKET_BASE}${encodeURIComponent(key)}`;
+        function mergeTransactions(localTxs, remoteTxs) {
+            const map = new Map();
+            (Array.isArray(remoteTxs) ? remoteTxs : []).forEach(tx => {
+                if (tx && tx.id) map.set(tx.id, tx);
+            });
+            (Array.isArray(localTxs) ? localTxs : []).forEach(tx => {
+                if (!tx || !tx.id) return;
+                const existing = map.get(tx.id);
+                if (!existing) {
+                    map.set(tx.id, tx);
+                } else {
+                    const localPaid = tx.paidAt ? new Date(tx.paidAt).getTime() : 0;
+                    const remotePaid = existing.paidAt ? new Date(existing.paidAt).getTime() : 0;
+                    const mergedVoided = Boolean(tx.voided || existing.voided);
+                    const mergedStatus = (tx.status === 'Paid' || existing.status === 'Paid') ? 'Paid' : 'Unpaid';
+                    map.set(tx.id, {
+                        ...existing,
+                        ...tx,
+                        voided: mergedVoided,
+                        status: mergedStatus,
+                        paidAt: localPaid >= remotePaid ? (tx.paidAt || existing.paidAt) : existing.paidAt
+                    });
+                }
+            });
+            return Array.from(map.values()).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+        }
+
+        function mergeCategories(localCats, remoteCats) {
+            const merged = new Set([...DEFAULT_CATEGORIES]);
+            (Array.isArray(remoteCats) ? remoteCats : []).forEach(c => c && merged.add(c));
+            (Array.isArray(localCats) ? localCats : []).forEach(c => c && merged.add(c));
+            return Array.from(merged);
         }
 
         function scheduleCloudPush() {
             if (!state.sync.enabled || !state.sync.key) return;
             clearTimeout(syncPushTimer);
-            updateSyncStatusUI('Saving...', 'text-cafe-caramel');
+            updateSyncStatusUI(navigator.onLine ? 'Syncing to cloud...' : 'Offline • Saved locally', 'text-cafe-caramel');
             syncPushTimer = setTimeout(() => {
-                pushToCloud();
-            }, 600);
+                pushToCloud(false);
+            }, 500);
         }
 
-        async function pushToCloud() {
-            if (!state.sync.enabled || isSyncing) return;
-            const url = getSyncUrl();
-            if (!url) return;
+        async function fetchWithTimeout(url, options = {}, timeoutMs = 4500) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                return await fetch(url, { ...options, signal: controller.signal });
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        async function pushToCloud(forceCreate = false) {
+            if (!state.sync.enabled || !state.sync.key) return;
+            if (!navigator.onLine) {
+                pendingPushAfterSync = true;
+                updateSyncStatusUI('Offline • Local saved', 'text-cafe-orange');
+                return;
+            }
+            if (isSyncing) {
+                pendingPushAfterSync = true;
+                return;
+            }
 
             isSyncing = true;
             try {
+                const nowTs = Date.now();
+                state.sync.updatedAt = nowTs;
                 const payload = {
-                    updatedAt: Date.now(),
+                    syncKey: state.sync.key,
+                    updatedAt: nowTs,
                     branding: state.branding,
                     products: state.products,
                     categories: state.categories,
                     transactions: state.transactions
                 };
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                let pushedOk = false;
+
+                // 1. Try npoint.io (reliable JSON store)
+                try {
+                    const npointUrl = state.sync.npointId
+                        ? `${SYNC_NPOINT_BASE}/${encodeURIComponent(state.sync.npointId)}`
+                        : SYNC_NPOINT_BASE;
+                    const npRes = await fetchWithTimeout(npointUrl, {
+                        method: state.sync.npointId ? 'POST' : 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (npRes && npRes.ok) {
+                        const npData = await npRes.json().catch(() => null);
+                        if (npData && npData.id) state.sync.npointId = npData.id;
+                        pushedOk = true;
+                    }
+                } catch (_) {
+                    // Fallback to next provider
+                }
+
+                // 2. Try kvdb.io keyed by syncKey
+                if (!pushedOk) {
+                    try {
+                        const kvdbUrl = `${SYNC_KVDB_BASE}/${encodeURIComponent(state.sync.key)}`;
+                        const kRes = await fetchWithTimeout(kvdbUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (kRes && kRes.ok) pushedOk = true;
+                    } catch (_) {
+                        // Fallback to next provider
+                    }
+                }
+
+                // 3. Try keyvalue.immanuel.co
+                if (!pushedOk) {
+                    try {
+                        const kvUrl = `${SYNC_KV_BASE}/update/${encodeURIComponent(state.sync.key)}`;
+                        const kvRes = await fetchWithTimeout(kvUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (kvRes && kvRes.ok) pushedOk = true;
+                    } catch (_) {
+                        // Fallback to JSONBlob below
+                    }
+                }
+
+                // 4. Fallback to JSONBlob
+                if (!pushedOk) {
+                    let res;
+                    if (state.sync.blobId && !forceCreate) {
+                        res = await fetchWithTimeout(`${SYNC_API_ENDPOINT}/${encodeURIComponent(state.sync.blobId)}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (res.status === 404) state.sync.blobId = null;
+                    }
+
+                    if (!state.sync.blobId || forceCreate) {
+                        res = await fetchWithTimeout(SYNC_API_ENDPOINT, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (res.ok) {
+                            const locationHeader = res.headers.get('Location') || res.headers.get('X-jsonblob-id') || '';
+                            const extractedId = locationHeader.split('/').filter(Boolean).pop();
+                            if (extractedId) state.sync.blobId = extractedId;
+                        }
+                    }
+
+                    if (!res || !res.ok) throw new Error(`HTTP ${res ? res.status : 'network'}`);
+                }
+
+                pendingPushAfterSync = false;
                 state.sync.lastSynced = new Date().toISOString();
                 saveSyncConfig();
                 applySyncUI();
             } catch (err) {
-                console.warn('Cloud push skipped/failed:', err.message);
-                updateSyncStatusUI('Offline / Saved locally', 'text-cafe-orange');
+                console.warn('Cloud push error:', err.message);
+                pendingPushAfterSync = true;
+                updateSyncStatusUI('Local saved • Use Copy Code or Export JSON', 'text-cafe-orange');
             } finally {
                 isSyncing = false;
+                if (pendingPushAfterSync && navigator.onLine) {
+                    pendingPushAfterSync = false;
+                    setTimeout(() => pushToCloud(false), 2000);
+                }
             }
         }
 
         async function pullFromCloud(showFeedback = false) {
-            if (!state.sync.enabled || isSyncing) return;
-            const url = getSyncUrl();
-            if (!url) return;
+            if (!state.sync.enabled || !state.sync.key) return;
+            if (!navigator.onLine) {
+                updateSyncStatusUI('Offline • Local saved', 'text-cafe-orange');
+                if (showFeedback) showToast('Walang internet — naka-save sa phone', 'wifi-off', 'text-amber-300');
+                return;
+            }
+            if (isSyncing) return;
 
             isSyncing = true;
-            if (showFeedback) updateSyncStatusUI('Syncing...', 'text-cafe-caramel');
+            if (showFeedback) updateSyncStatusUI('Checking cloud...', 'text-cafe-caramel');
 
             try {
-                const res = await fetch(`${url}?t=${Date.now()}`, { method: 'GET', cache: 'no-store' });
-                if (res.status === 404) {
-                    // First time using this Sync Key: push current store data up
+                let remote = null;
+
+                // 1. Try npoint.io if we have npointId
+                if (state.sync.npointId) {
+                    try {
+                        const npRes = await fetchWithTimeout(`${SYNC_NPOINT_BASE}/${encodeURIComponent(state.sync.npointId)}?t=${Date.now()}`, {
+                            method: 'GET',
+                            headers: { 'Accept': 'application/json' },
+                            cache: 'no-store'
+                        });
+                        if (npRes && npRes.ok) {
+                            remote = await npRes.json();
+                        }
+                    } catch (_) {}
+                }
+
+                // 2. Try kvdb.io
+                if (!remote) {
+                    try {
+                        const kRes = await fetchWithTimeout(`${SYNC_KVDB_BASE}/${encodeURIComponent(state.sync.key)}?t=${Date.now()}`, {
+                            method: 'GET',
+                            cache: 'no-store'
+                        });
+                        if (kRes && kRes.ok) {
+                            const text = await kRes.text();
+                            if (text && text !== 'null') remote = JSON.parse(text);
+                        }
+                    } catch (_) {}
+                }
+
+                // 3. Try keyvalue.immanuel.co
+                if (!remote) {
+                    try {
+                        const kvRes = await fetchWithTimeout(`${SYNC_KV_BASE}/get/${encodeURIComponent(state.sync.key)}?t=${Date.now()}`, {
+                            method: 'GET',
+                            cache: 'no-store'
+                        });
+                        if (kvRes && kvRes.ok) {
+                            const text = await kvRes.text();
+                            if (text && text !== 'null' && text !== 'Key not found') {
+                                remote = JSON.parse(text);
+                            }
+                        }
+                    } catch (_) {
+                        // Fallback to blobId if available
+                    }
+                }
+
+                // 4. Fallback to blobId if available
+                if (!remote && state.sync.blobId) {
+                    const res = await fetchWithTimeout(`${SYNC_API_ENDPOINT}/${encodeURIComponent(state.sync.blobId)}?t=${Date.now()}`, {
+                        method: 'GET',
+                        headers: { 'Accept': 'application/json' },
+                        cache: 'no-store'
+                    });
+                    if (res.status === 404) {
+                        state.sync.blobId = null;
+                        saveSyncConfig();
+                    } else if (res.ok) {
+                        remote = await res.json();
+                    }
+                }
+
+                if (!remote) {
                     isSyncing = false;
-                    await pushToCloud();
-                    if (showFeedback) showToast('Cloud room ready & synced');
+                    await pushToCloud(false);
+                    if (showFeedback) showToast('Local data is saved on this device');
                     return;
                 }
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-                const remote = await res.json();
                 if (remote && Array.isArray(remote.products) && Array.isArray(remote.transactions)) {
-                    state.products = remote.products;
-                    if (Array.isArray(remote.categories) && remote.categories.length > 0) {
-                        state.categories = remote.categories;
-                    }
-                    state.transactions = remote.transactions;
-                    if (remote.branding && remote.branding.name) {
-                        state.branding = remote.branding;
+                    const remoteUpdated = Number(remote.updatedAt || 0);
+                    const localUpdated = Number(state.sync.updatedAt || 0);
+
+                    state.transactions = mergeTransactions(state.transactions, remote.transactions);
+                    state.categories = mergeCategories(state.categories, remote.categories);
+
+                    if (remoteUpdated >= localUpdated) {
+                        state.products = remote.products;
+                        if (remote.branding && remote.branding.name) {
+                            state.branding = remote.branding;
+                        }
+                        state.sync.updatedAt = remoteUpdated || Date.now();
                     }
 
                     saveProducts();
@@ -1064,12 +1501,12 @@
                     renderAll();
                     lucide.createIcons();
 
-                    if (showFeedback) showToast('Synced latest store data!');
+                    if (showFeedback) showToast('Na-sync na ang pinakabagong data!');
                 }
             } catch (err) {
-                console.warn('Cloud pull failed:', err.message);
-                updateSyncStatusUI('Offline / Local mode', 'text-cafe-orange');
-                if (showFeedback) showToast('No internet connection — using local data', 'wifi-off', 'text-amber-300');
+                console.warn('Cloud pull error:', err.message);
+                updateSyncStatusUI('Local saved • Use Copy Code or Export JSON', 'text-cafe-orange');
+                if (showFeedback) showToast('Naka-save sa phone; pindutin ang Copy Code para ilipat', 'hard-drive', 'text-amber-300');
             } finally {
                 isSyncing = false;
             }
@@ -1129,8 +1566,32 @@
             const syncKeyInput = document.getElementById('sync-key-input');
             if (syncKeyInput) {
                 syncKeyInput.addEventListener('change', (e) => {
-                    const cleaned = e.target.value.trim().replace(/[^a-zA-Z0-9_-]/g, '');
-                    state.sync.key = cleaned || createRandomSyncKey();
+                    const raw = e.target.value.trim();
+                    if (raw.startsWith('SS1-')) {
+                        try {
+                            const applied = applySyncCode(raw);
+                            if (applied) {
+                                showToast('Sync Code loaded!');
+                                return;
+                            }
+                        } catch (err) {
+                            showToast('Invalid Sync Code', 'alert-circle', 'text-red-300');
+                        }
+                    }
+                    if (raw.includes('jsonblob.com/')) {
+                        const parts = raw.split('/').filter(Boolean);
+                        const maybeId = parts[parts.length - 1];
+                        if (maybeId) {
+                            state.sync.blobId = maybeId;
+                            state.sync.key = state.sync.key || `sari-${maybeId.slice(-6)}`;
+                        }
+                    } else {
+                        const cleaned = raw.replace(/[^a-zA-Z0-9_-]/g, '');
+                        if (cleaned !== state.sync.key) {
+                            state.sync.key = cleaned || createRandomSyncKey();
+                            state.sync.blobId = null;
+                        }
+                    }
                     e.target.value = state.sync.key;
                     saveSyncConfig();
                     applySyncUI();
@@ -1139,7 +1600,18 @@
             }
 
             window.addEventListener('online', () => {
-                if (state.sync.enabled) pullFromCloud(false);
+                applySyncUI();
+                if (state.sync.enabled) {
+                    if (pendingPushAfterSync) {
+                        pendingPushAfterSync = false;
+                        pushToCloud(false);
+                    } else {
+                        pullFromCloud(false);
+                    }
+                }
+            });
+            window.addEventListener('offline', () => {
+                applySyncUI();
             });
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'visible' && state.sync.enabled) {
@@ -1180,10 +1652,12 @@
                     state.sync = {
                         enabled: parsedSync.enabled !== undefined ? Boolean(parsedSync.enabled) : true,
                         key: parsedSync.key || createRandomSyncKey(),
+                        blobId: parsedSync.blobId || null,
+                        updatedAt: Number(parsedSync.updatedAt || 0),
                         lastSynced: parsedSync.lastSynced || null
                     };
                 } else {
-                    state.sync = { enabled: true, key: createRandomSyncKey(), lastSynced: null };
+                    state.sync = { enabled: true, key: createRandomSyncKey(), blobId: null, updatedAt: 0, lastSynced: null };
                 }
                 saveSyncConfig();
 
@@ -1329,13 +1803,77 @@
             const activeTxs = state.transactions.filter(t => !t.voided && t.status === 'Paid');
             let todayRevenue = 0;
             let todayCost = 0;
+            const soldQtyByProduct = {};
+            const soldQtyByName = {};
+
             activeTxs.forEach(tx => {
                 if (isToday(tx.paidAt || tx.date)) {
                     todayRevenue += Number(tx.total || 0);
                     todayCost += Number(tx.totalCost || 0);
                 }
+                (Array.isArray(tx.items) ? tx.items : []).forEach(item => {
+                    const qty = Number(item.qty || 0);
+                    if (qty <= 0) return;
+                    if (item.productId) {
+                        soldQtyByProduct[item.productId] = (soldQtyByProduct[item.productId] || 0) + qty;
+                    }
+                    if (item.name) {
+                        const key = String(item.name).trim().toLowerCase();
+                        soldQtyByName[key] = (soldQtyByName[key] || 0) + qty;
+                    }
+                });
             });
             const todayKita = todayRevenue - todayCost;
+
+            // Find top-selling product based on actual sales
+            let topProduct = null;
+            let highestSold = 0;
+
+            state.products.forEach(prod => {
+                const byId = soldQtyByProduct[prod.id] || 0;
+                const byName = soldQtyByName[String(prod.name || '').trim().toLowerCase()] || 0;
+                const totalSold = Math.max(byId, byName);
+                if (totalSold > highestSold) {
+                    highestSold = totalSold;
+                    topProduct = prod;
+                }
+            });
+
+            if (!topProduct && state.products.length > 0) {
+                topProduct = state.products[0];
+            }
+
+            applyAdaptiveColorFromHero(topProduct);
+
+            const heroImgEl = document.getElementById('hero-bestseller-img');
+            const heroEmojiEl = document.getElementById('hero-bestseller-emoji');
+            const heroNameEl = document.getElementById('hero-bestseller-name');
+            const heroTagEl = document.getElementById('hero-bestseller-tag');
+
+            if (topProduct) {
+                if (heroNameEl) heroNameEl.textContent = topProduct.name;
+                if (heroTagEl) heroTagEl.textContent = highestSold > 0 ? `MABENTA (${highestSold} SOLD)` : 'TOP ITEM';
+                if (topProduct.image && heroImgEl) {
+                    heroImgEl.src = topProduct.image;
+                    heroImgEl.alt = topProduct.name;
+                    heroImgEl.onerror = function() {
+                        this.onerror = null;
+                        this.classList.add('hidden');
+                        if (heroEmojiEl) {
+                            heroEmojiEl.textContent = topProduct.emoji || '☕';
+                            heroEmojiEl.classList.remove('hidden');
+                        }
+                    };
+                    heroImgEl.classList.remove('hidden');
+                    if (heroEmojiEl) heroEmojiEl.classList.add('hidden');
+                } else {
+                    if (heroImgEl) heroImgEl.classList.add('hidden');
+                    if (heroEmojiEl) {
+                        heroEmojiEl.textContent = topProduct.emoji || '☕';
+                        heroEmojiEl.classList.remove('hidden');
+                    }
+                }
+            }
 
             let totalCostValue = 0;
             let totalRetailValue = 0;
@@ -1429,6 +1967,7 @@
                 const matchesQuery = !state.posSearchQuery ||
                     p.name.toLowerCase().includes(state.posSearchQuery) ||
                     (p.desc && p.desc.toLowerCase().includes(state.posSearchQuery)) ||
+                    (p.barcode && String(p.barcode).toLowerCase().includes(state.posSearchQuery)) ||
                     p.category.toLowerCase().includes(state.posSearchQuery);
 
                 let matchesStock = true;
@@ -1870,6 +2409,7 @@
                 document.getElementById('prod-id').value = prod.id;
                 document.getElementById('prod-name').value = prod.name;
                 document.getElementById('prod-desc').value = prod.desc || '';
+                document.getElementById('prod-barcode').value = prod.barcode || '';
                 document.getElementById('prod-category').value = prod.category;
                 document.getElementById('prod-cost').value = prod.cost;
                 document.getElementById('prod-price').value = prod.price;
@@ -1884,6 +2424,7 @@
                 delBox.classList.add('hidden');
                 document.getElementById('product-form').reset();
                 document.getElementById('prod-id').value = '';
+                document.getElementById('prod-barcode').value = '';
                 document.getElementById('prod-threshold').value = 5;
                 state.editingProductImage = null;
                 state.selectedEmoji = '☕';
@@ -1989,6 +2530,7 @@
             const id = document.getElementById('prod-id').value;
             const name = document.getElementById('prod-name').value.trim();
             const desc = document.getElementById('prod-desc').value.trim();
+            const barcode = (document.getElementById('prod-barcode')?.value || '').trim();
             const category = document.getElementById('prod-category').value;
             const cost = parseFloat(document.getElementById('prod-cost').value) || 0;
             const price = parseFloat(document.getElementById('prod-price').value) || 0;
@@ -2007,6 +2549,7 @@
                         ...state.products[idx],
                         name,
                         desc,
+                        barcode,
                         category,
                         cost,
                         price,
@@ -2022,6 +2565,7 @@
                     id: 'p-' + Date.now().toString().slice(-6),
                     name,
                     desc,
+                    barcode,
                     category,
                     cost,
                     price,
@@ -2335,6 +2879,121 @@
             document.getElementById('confirm-modal').classList.remove('hidden');
         }
         function closeConfirmModal() { document.getElementById('confirm-modal').classList.add('hidden'); }
+
+        // ==================== BARCODE SCANNER ====================
+        let scannerMode = 'pos';
+        let scannerStream = null;
+        let scannerRafId = null;
+
+        async function openBarcodeScanner(mode = 'pos') {
+            scannerMode = mode;
+            const modal = document.getElementById('barcode-modal');
+            const modeLabel = document.getElementById('scanner-mode-label');
+            const statusEl = document.getElementById('scanner-status');
+            const manualInput = document.getElementById('manual-barcode-input');
+
+            if (modeLabel) {
+                modeLabel.textContent = mode === 'product' ? 'Product Barcode' : 'POS Quick Scan';
+            }
+            if (manualInput) manualInput.value = '';
+            if (modal) modal.classList.remove('hidden');
+            lucide.createIcons();
+
+            const video = document.getElementById('barcode-video');
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof BarcodeDetector === 'undefined') {
+                if (statusEl) statusEl.textContent = 'Camera scanner unavailable — enter or scan barcode below';
+                return;
+            }
+
+            try {
+                scannerStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: 'environment' } },
+                    audio: false
+                });
+                if (video) {
+                    video.srcObject = scannerStream;
+                    await video.play();
+                }
+
+                const detector = new BarcodeDetector({
+                    formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code']
+                });
+
+                const scanFrame = async () => {
+                    if (!video || video.readyState < 2) {
+                        scannerRafId = requestAnimationFrame(scanFrame);
+                        return;
+                    }
+                    try {
+                        const codes = await detector.detect(video);
+                        if (codes && codes.length > 0 && codes[0].rawValue) {
+                            handleScannedBarcode(codes[0].rawValue.trim());
+                            return;
+                        }
+                    } catch (_) {}
+                    scannerRafId = requestAnimationFrame(scanFrame);
+                };
+
+                if (statusEl) statusEl.textContent = 'Point camera at barcode...';
+                scannerRafId = requestAnimationFrame(scanFrame);
+            } catch (err) {
+                console.warn('Camera scanner fallback:', err);
+                if (statusEl) statusEl.textContent = 'Camera blocked/unavailable — type or scan code below';
+            }
+        }
+
+        function closeBarcodeScanner() {
+            if (scannerRafId) {
+                cancelAnimationFrame(scannerRafId);
+                scannerRafId = null;
+            }
+            if (scannerStream) {
+                scannerStream.getTracks().forEach(track => track.stop());
+                scannerStream = null;
+            }
+            const video = document.getElementById('barcode-video');
+            if (video) video.srcObject = null;
+            const modal = document.getElementById('barcode-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function submitManualBarcode() {
+            const input = document.getElementById('manual-barcode-input');
+            const code = (input?.value || '').trim();
+            if (!code) {
+                showToast('Enter or scan a barcode first', 'alert-circle', 'text-amber-300');
+                return;
+            }
+            handleScannedBarcode(code);
+        }
+
+        function handleScannedBarcode(code) {
+            closeBarcodeScanner();
+            const normalized = String(code).trim();
+
+            if (scannerMode === 'product') {
+                const barcodeInput = document.getElementById('prod-barcode');
+                if (barcodeInput) barcodeInput.value = normalized;
+                showToast(`Barcode set: ${normalized}`);
+                return;
+            }
+
+            const matched = state.products.find(p => String(p.barcode || '').trim().toLowerCase() === normalized.toLowerCase());
+            if (matched) {
+                addToCart(matched.id);
+                return;
+            }
+
+            const searchInput = document.getElementById('pos-search');
+            if (searchInput) {
+                searchInput.value = normalized;
+                state.posSearchQuery = normalized.toLowerCase();
+                const clearBtn = document.getElementById('pos-search-clear');
+                if (clearBtn) clearBtn.classList.remove('hidden');
+                renderPOSGrid();
+            }
+            showToast(`No product with barcode ${normalized}`, 'scan-barcode', 'text-amber-300');
+        }
 
         let toastTimer = null;
         function showToast(message, iconName = 'check-circle-2', iconColorClass = 'text-amber-300') {
