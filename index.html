@@ -1,18 +1,23 @@
 <!DOCTYPE html>
-<html lang="en" class="antialiased selection:bg-blue-500 selection:text-white">
+<html lang="en" class="antialiased selection:bg-[#4A2C18] selection:text-white">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>TindahanPOS - Sari-Sari Store POS & Inventory</title>
+    <title>Brew & Bliss POS - Store & Inventory</title>
     
     <!-- iOS PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="TindahanPOS">
-    <meta name="theme-color" content="#F2F2F7">
+    <meta name="apple-mobile-web-app-title" content="Brew & Bliss POS">
+    <meta name="theme-color" content="#FAF5F0">
     
     <!-- Dynamic SVG App Icon for iOS Home Screen -->
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='40' fill='%23007AFF'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='90'>🏪</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='40' fill='%234A2C18'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='88'>☕</text></svg>">
+
+    <!-- Google Fonts: Plus Jakarta Sans (Clean UI) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -21,25 +26,30 @@
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', 'Inter', 'sans-serif'],
+                        serif: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
                     },
                     colors: {
-                        ios: {
-                            bg: '#F2F2F7',
+                        cafe: {
+                            bg: '#FAF5F0',
+                            surface: '#F4ECE4',
                             card: '#FFFFFF',
-                            blue: '#007AFF',
-                            green: '#34C759',
-                            orange: '#FF9500',
-                            red: '#FF3B30',
-                            purple: '#AF52DE',
-                            gray: '#8E8E93',
-                            lightGray: '#E5E5EA',
-                            separator: '#C6C6C8'
+                            border: '#EFE5DC',
+                            espresso: '#4A2C18',
+                            espressoDark: '#2A160B',
+                            caramel: '#8B5A2B',
+                            latte: '#D9C3B0',
+                            text: '#23140B',
+                            muted: '#7A6455',
+                            green: '#2E7D32',
+                            red: '#C62828',
+                            orange: '#D97706'
                         }
                     },
                     boxShadow: {
-                        'ios': '0 2px 10px rgba(0, 0, 0, 0.04)',
-                        'ios-float': '0 8px 24px rgba(0, 0, 0, 0.12)',
+                        'cafe': '0 4px 16px rgba(74, 44, 24, 0.05)',
+                        'cafe-lg': '0 10px 28px rgba(74, 44, 24, 0.14)',
+                        'cafe-nav': '0 -4px 20px rgba(74, 44, 24, 0.06)',
                     }
                 }
             }
@@ -50,30 +60,42 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        /* iOS Native Feel & Safe Area Support */
         :root {
             --sat: env(safe-area-inset-top, 0px);
             --sab: env(safe-area-inset-bottom, 0px);
         }
 
         body {
-            background-color: #F2F2F7;
-            color: #000000;
+            background-color: #FAF5F0;
+            color: #23140B;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 16px;
+            line-height: 1.5;
+            letter-spacing: -0.01em;
             -webkit-tap-highlight-color: transparent;
             overscroll-behavior-y: none;
             padding-top: var(--sat);
-            padding-bottom: calc(76px + var(--sab));
+            padding-bottom: calc(96px + var(--sab));
+        }
+
+        h1, h2, h3, .font-serif {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-style: normal;
+            letter-spacing: -0.015em;
+        }
+
+        .tabular-nums {
+            font-variant-numeric: tabular-nums;
         }
 
         .safe-top {
-            padding-top: max(12px, var(--sat));
+            padding-top: max(10px, var(--sat));
         }
 
         .safe-bottom {
-            padding-bottom: max(12px, var(--sab));
+            padding-bottom: max(10px, var(--sab));
         }
 
-        /* Hide scrollbars for horizontal category pills */
         .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -82,28 +104,19 @@
             scrollbar-width: none;
         }
 
-        /* iOS Glassmorphism */
-        .ios-blur {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: saturate(180%) blur(20px);
-            -webkit-backdrop-filter: saturate(180%) blur(20px);
+        .cafe-blur {
+            background: rgba(250, 245, 240, 0.92);
+            backdrop-filter: saturate(180%) blur(18px);
+            -webkit-backdrop-filter: saturate(180%) blur(18px);
         }
 
-        .ios-bg-blur {
-            background: rgba(242, 242, 247, 0.88);
-            backdrop-filter: saturate(180%) blur(20px);
-            -webkit-backdrop-filter: saturate(180%) blur(20px);
-        }
-
-        /* Smooth Tap Scale */
         .tap-scale {
-            transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1);
+            transition: transform 0.14s cubic-bezier(0.2, 0, 0, 1);
         }
         .tap-scale:active {
             transform: scale(0.96);
         }
 
-        /* Modal Slide Up Animation */
         @keyframes slideUp {
             from { transform: translateY(100%); }
             to { transform: translateY(0); }
@@ -115,142 +128,284 @@
 </head>
 <body class="min-h-screen overflow-x-hidden select-none">
 
-    <!-- Top Sticky Header -->
-    <header class="sticky top-0 z-30 ios-bg-blur border-b border-black/5 px-4 safe-top pb-3">
-        <div class="max-w-2xl mx-auto flex items-center justify-between pt-2">
-            <div>
-                <p id="header-subtitle" class="text-[11px] font-semibold uppercase tracking-wider text-ios-gray">Sari-Sari Store</p>
-                <h1 id="header-title" class="text-2xl font-bold tracking-tight text-black">TindahanPOS</h1>
+    <!-- ==================== TOP CENTERED BRAND HEADER ==================== -->
+    <header class="sticky top-0 z-30 cafe-blur px-4 safe-top pb-2.5 border-b border-cafe-border/60">
+        <div class="max-w-xl mx-auto flex items-center justify-between pt-1">
+            <!-- Left Menu Button (Quick Backup & Store Settings) -->
+            <button onclick="switchTab('store')" aria-label="Store Menu" class="w-10 h-10 rounded-full flex items-center justify-center text-cafe-text hover:bg-cafe-surface tap-scale">
+                <i data-lucide="align-left" class="w-5 h-5"></i>
+            </button>
+
+            <!-- Center Brand Title (Matching Brew & Bliss Reference) -->
+            <!-- Center Brand Title -->
+            <div onclick="switchTab('pos')" class="text-center cursor-pointer">
+                <div class="flex justify-center mb-0.5 text-cafe-espresso">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 8h1a4 4 0 1 1 0 8h-1"/>
+                        <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/>
+                        <line x1="6" x2="6" y1="2" y2="4"/>
+                        <line x1="10" x2="10" y1="2" y2="4"/>
+                        <line x1="14" x2="14" y1="2" y2="4"/>
+                    </svg>
+                </div>
+                <h1 id="brand-name-display" class="font-sans text-[22px] font-bold tracking-tight text-cafe-text leading-none">Sari-Sari</h1>
+                <p id="brand-sub-display" class="text-[11px] font-bold tracking-[0.18em] text-cafe-muted uppercase mt-1">— STORE & POS —</p>
             </div>
-            <div id="header-action">
-                <!-- Dynamic action button injected per tab -->
+
+            <!-- Right Alerts & Cart Icons -->
+            <div class="flex items-center gap-1">
+                <button onclick="openAlertsDrawer()" aria-label="Notifications" class="relative w-10 h-10 rounded-full flex items-center justify-center text-cafe-text hover:bg-cafe-surface tap-scale">
+                    <i data-lucide="bell" class="w-5 h-5"></i>
+                    <span id="header-alert-badge" class="hidden absolute top-1.5 right-1.5 bg-cafe-espresso text-white text-[9px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center">0</span>
+                </button>
+                <button onclick="openCartModal()" aria-label="Checkout Cart" class="relative w-10 h-10 rounded-full flex items-center justify-center text-cafe-text hover:bg-cafe-surface tap-scale">
+                    <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+                    <span id="header-cart-badge" class="hidden absolute top-1.5 right-1.5 bg-cafe-espresso text-white text-[9px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center">0</span>
+                </button>
             </div>
         </div>
     </header>
 
-    <!-- Toast Notification Banner (iOS Dynamic Island / Banner style) -->
+    <!-- Toast Notification Banner -->
     <div id="toast-container" class="fixed top-4 left-4 right-4 z-50 pointer-events-none flex justify-center safe-top">
-        <div id="toast" class="opacity-0 -translate-y-4 transition-all duration-300 bg-black/90 text-white px-4 py-2.5 rounded-full shadow-ios-float flex items-center gap-2 text-sm font-medium max-w-sm">
-            <i id="toast-icon" data-lucide="check-circle-2" class="w-4 h-4 text-ios-green shrink-0"></i>
+        <div id="toast" class="opacity-0 -translate-y-4 transition-all duration-300 bg-cafe-espressoDark text-white px-4 py-2.5 rounded-full shadow-cafe-lg flex items-center gap-2 text-xs font-semibold max-w-sm">
+            <i id="toast-icon" data-lucide="check-circle-2" class="w-4 h-4 text-amber-300 shrink-0"></i>
             <span id="toast-message">Action completed</span>
         </div>
     </div>
 
-    <!-- Main Content Container -->
-    <main class="max-w-2xl mx-auto px-4 pt-3 pb-8">
+    <!-- Main Container -->
+    <main class="max-w-xl mx-auto px-4 pt-3 pb-6">
 
-        <!-- ==================== TAB 1: POS (CHECKOUT) ==================== -->
-        <section id="tab-pos" class="space-y-3">
-            <!-- Search Bar -->
-            <div class="relative">
-                <i data-lucide="search" class="w-4 h-4 text-ios-gray absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-                <input type="text" id="pos-search" placeholder="Search items (e.g., Kopiko, Sardines, GCash)..." 
-                    class="w-full bg-[#E5E5EA]/70 focus:bg-white text-sm rounded-xl pl-10 pr-9 py-2.5 outline-none transition-all border border-transparent focus:border-ios-blue/30 shadow-inner">
-                <button id="pos-search-clear" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-ios-gray p-1">
-                    <i data-lucide="x-circle" class="w-4 h-4"></i>
+        <!-- ==================== TAB 1: POS HOME (MATCHING REFERENCE MOCKUP) ==================== -->
+        <section id="tab-pos" class="space-y-4">
+            
+            <!-- Pill Search Bar + Circular Filter Button -->
+            <div class="flex items-center gap-2.5">
+                <div class="relative flex-1">
+                    <i data-lucide="search" class="w-4 h-4 text-cafe-muted absolute left-4 top-1/2 -translate-y-1/2"></i>
+                    <input type="text" id="pos-search" placeholder="Search coffee, snacks, goods & more..." 
+                        class="w-full bg-white text-[15px] text-cafe-text placeholder:text-cafe-muted/70 rounded-full pl-10 pr-9 py-2.5 outline-none border border-cafe-border shadow-cafe focus:border-cafe-espresso transition-all">
+                    <button id="pos-search-clear" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-cafe-muted p-1">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+                <button id="pos-stock-filter-btn" onclick="cyclePOSStockFilter()" title="Filter stock status"
+                    class="w-10 h-10 rounded-full bg-white border border-cafe-border shadow-cafe flex items-center justify-center text-cafe-text tap-scale shrink-0 relative">
+                    <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+                    <span id="pos-filter-dot" class="hidden absolute top-0 right-0 w-2.5 h-2.5 rounded-full bg-cafe-caramel border-2 border-white"></span>
                 </button>
             </div>
 
-            <!-- Category Pills -->
-            <div id="pos-categories" class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+            <!-- Dark Espresso Hero Banner Card (Matching "Good Coffee / Good Vibes") -->
+            <div class="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#231208] via-[#3A1F10] to-[#59331B] text-white p-5 shadow-cafe-lg">
+                <!-- Decorative Coffee Cup & Beans Vector Illustration on Right -->
+                <div class="absolute right-[-14px] bottom-[-14px] w-44 h-44 opacity-95 pointer-events-none">
+                    <svg viewBox="0 0 200 200" class="w-full h-full">
+                        <defs>
+                            <radialGradient id="cupGlow" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stop-color="#D9A066" stop-opacity="0.35"/>
+                                <stop offset="100%" stop-color="#231208" stop-opacity="0"/>
+                            </radialGradient>
+                        </defs>
+                        <circle cx="110" cy="105" r="85" fill="url(#cupGlow)"/>
+                        <!-- Saucer -->
+                        <ellipse cx="112" cy="148" rx="68" ry="20" fill="#D8C7B8"/>
+                        <ellipse cx="112" cy="145" rx="54" ry="14" fill="#BCA694"/>
+                        <!-- Cup Body -->
+                        <path d="M62 88 C62 135, 162 135, 162 88 Z" fill="#EFE4D8"/>
+                        <path d="M158 95 C178 95, 178 122, 155 124" fill="none" stroke="#EFE4D8" stroke-width="8" stroke-linecap="round"/>
+                        <!-- Latte Art Top -->
+                        <ellipse cx="112" cy="88" rx="50" ry="16" fill="#8C5327"/>
+                        <path d="M112 79 C104 83, 104 93, 112 97 C120 93, 120 83, 112 79 Z" fill="#F7EFE6"/>
+                        <path d="M112 83 C108 86, 108 91, 112 94 C116 91, 116 86, 112 83 Z" fill="#8C5327"/>
+                        <!-- Roasted Coffee Beans -->
+                        <ellipse cx="52" cy="154" rx="8" ry="5" transform="rotate(-25 52 154)" fill="#3E1E0E"/>
+                        <ellipse cx="70" cy="162" rx="7" ry="4.5" transform="rotate(15 70 162)" fill="#4D2612"/>
+                        <ellipse cx="156" cy="160" rx="8" ry="5" transform="rotate(-15 156 160)" fill="#3E1E0E"/>
+                    </svg>
+                </div>
+
+                <div class="relative z-10 max-w-[65%]">
+                    <p id="hero-kicker" class="font-sans font-semibold text-amber-200 text-[13px] tracking-wide uppercase">Today's Store Pulse</p>
+                    <h2 id="hero-headline" class="font-sans text-[27px] font-extrabold leading-[1.15] tracking-tight mt-0.5">Good Stock,<br>Great Sales</h2>
+                    <p id="hero-subtext" class="text-xs text-amber-100/90 mt-1.5 leading-relaxed tabular-nums">
+                        Collected today: <strong id="hero-today-sales" class="text-white font-bold">₱0.00</strong> • Kita: <strong id="hero-today-kita" class="text-amber-300 font-bold">₱0.00</strong>
+                    </p>
+                    <div class="mt-3.5 flex items-center gap-2">
+                        <button onclick="openProductModal()" class="bg-[#5C361E] hover:bg-[#6E4226] border border-amber-200/20 text-white text-xs font-bold tracking-wider uppercase pl-3.5 pr-2 py-1.5 rounded-full flex items-center gap-2 tap-scale shadow-sm">
+                            <span>+ ADD ITEM</span>
+                            <span class="w-5 h-5 rounded-full bg-white text-cafe-espresso flex items-center justify-center">
+                                <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Decorative Carousel Dots -->
+                <div class="relative z-10 flex justify-center gap-1.5 mt-3">
+                    <span class="w-4 h-1.5 rounded-full bg-white"></span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-white/35"></span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-white/35"></span>
+                </div>
+            </div>
+
+            <!-- Circular Category Icons Row (Matching Coffee / Pastries / Sandwiches row) -->
+            <div id="pos-categories" class="flex gap-3.5 overflow-x-auto no-scrollbar py-1">
                 <!-- Rendered via JS -->
             </div>
 
-            <!-- Product Grid -->
-            <div id="pos-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
+            <!-- Section Header: Popular Picks / All Items -->
+            <div class="flex items-center justify-between pt-0.5">
+                <h3 id="pos-section-title" class="text-[17px] font-bold text-cafe-text">Popular Picks</h3>
+                <button onclick="switchTab('inventory')" class="text-xs font-semibold text-cafe-muted hover:text-cafe-espresso flex items-center gap-1 tap-scale">
+                    <span>Manage Stock</span>
+                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+
+            <!-- Product Cards Grid (Matching Reference Card Anatomy) -->
+            <div id="pos-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <!-- Rendered via JS -->
             </div>
 
-            <!-- Empty State for POS -->
-            <div id="pos-empty" class="hidden text-center py-12">
-                <div class="text-4xl mb-2">🔍</div>
-                <p class="text-base font-semibold text-gray-800">No items found</p>
-                <p class="text-xs text-ios-gray mt-1">Try another search or add items in Inventory.</p>
+            <!-- Empty Search State -->
+            <div id="pos-empty" class="hidden bg-white rounded-2xl p-8 text-center border border-cafe-border">
+                <p class="text-3xl mb-2">☕</p>
+                <p class="text-sm font-bold text-cafe-text">No products match your filter</p>
+                <p class="text-xs text-cafe-muted mt-1">Clear your search or add a new item to your store.</p>
             </div>
+
+            <!-- Bottom Promo / Inventory Valuation Summary Card (Matching "WEEKEND SPECIAL / 20% OFF" Banner) -->
+            <div onclick="switchTab('inventory')" class="relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#EFE3D6] via-[#E8D7C5] to-[#DFC8B2] border border-cafe-border p-4 flex items-center justify-between gap-3 cursor-pointer tap-scale shadow-cafe">
+                <div class="z-10">
+                    <p class="text-[11px] font-bold tracking-wider uppercase text-cafe-caramel">INVENTORY VALUATION</p>
+                    <p id="banner-inv-retail" class="font-sans text-2xl font-extrabold text-cafe-text leading-tight mt-0.5 tabular-nums">₱0.00</p>
+                    <p class="text-xs text-cafe-muted mt-0.5 tabular-nums">
+                        Original Puhunan: <strong id="banner-inv-cost" class="text-cafe-text font-bold">₱0.00</strong>
+                    </p>
+                    <div class="mt-2.5 inline-flex items-center gap-2 bg-cafe-espresso text-white text-[11px] font-bold tracking-wider uppercase pl-3 pr-1.5 py-1 rounded-full">
+                        <span>VIEW INVENTORY</span>
+                        <span class="w-4 h-4 rounded-full bg-white text-cafe-espresso flex items-center justify-center">
+                            <i data-lucide="arrow-right" class="w-2.5 h-2.5"></i>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Circular Profit Badge on Right (Matching "20% OFF" Circle) -->
+                <div class="w-20 h-20 rounded-full bg-cafe-espresso text-white flex flex-col items-center justify-center text-center p-2 shrink-0 shadow-md border-2 border-white/40 tabular-nums">
+                    <span class="text-[10px] uppercase tracking-wider text-amber-200 font-semibold">Est. Kita</span>
+                    <span id="banner-inv-profit" class="text-xs font-extrabold leading-tight mt-0.5">+₱0</span>
+                </div>
+            </div>
+
         </section>
 
-        <!-- ==================== TAB 2: INVENTORY ==================== -->
-        <section id="tab-inventory" class="hidden space-y-3">
-            <!-- Search & Low Stock Toggle -->
+        <!-- ==================== TAB 2: INVENTORY (ORIGINAL PUHUNAN VS INVENTORY PRICE) ==================== -->
+        <section id="tab-inventory" class="hidden space-y-3.5">
+            
+            <!-- Header Row -->
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="font-sans text-xl font-extrabold text-cafe-text">Store Inventory</h2>
+                    <p class="text-xs text-cafe-muted">Track puhunan, retail value & stock levels</p>
+                </div>
+                <button onclick="openProductModal()" class="px-3.5 py-2 bg-cafe-espresso text-white rounded-full text-xs font-bold flex items-center gap-1.5 tap-scale shadow-cafe">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    <span>Add Item</span>
+                </button>
+            </div>
+
+            <!-- Prominent Original Price vs. Inventory Price Comparison Card -->
+            <div class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe space-y-3">
+                <div class="flex items-center justify-between border-b border-cafe-border/70 pb-2">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-cafe-caramel">Total Stock Valuation</span>
+                    <span id="inv-stat-est-profit" class="text-xs font-bold text-cafe-green bg-green-50 px-2.5 py-0.5 rounded-full">Est. Kita: +₱0.00</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-cafe-bg p-3 rounded-xl border border-cafe-border/60">
+                        <p class="text-[11px] font-semibold text-cafe-muted">Original Price (Puhunan)</p>
+                        <p id="inv-stat-cost-value" class="font-sans text-lg font-extrabold text-cafe-text mt-0.5 tabular-nums">₱0.00</p>
+                        <p class="text-[10px] text-cafe-muted mt-0.5">Total capital in stock</p>
+                    </div>
+                    <div class="bg-cafe-bg p-3 rounded-xl border border-cafe-border/60">
+                        <p class="text-[11px] font-semibold text-cafe-muted">Inventory Price (Benta)</p>
+                        <p id="inv-stat-retail-value" class="font-sans text-lg font-extrabold text-cafe-espresso mt-0.5 tabular-nums">₱0.00</p>
+                        <p class="text-[10px] text-cafe-muted mt-0.5">Total selling value</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 pt-0.5 text-xs">
+                    <div class="flex items-center justify-between px-2">
+                        <span class="text-cafe-muted">Total Products:</span>
+                        <span id="inv-stat-total" class="font-bold text-cafe-text">0</span>
+                    </div>
+                    <div class="flex items-center justify-between px-2">
+                        <span class="text-cafe-muted">Low / Out of Stock:</span>
+                        <span id="inv-stat-low" class="font-bold text-cafe-orange">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search & Low Stock Filter -->
             <div class="flex gap-2">
                 <div class="relative flex-1">
-                    <i data-lucide="search" class="w-4 h-4 text-ios-gray absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                    <i data-lucide="search" class="w-4 h-4 text-cafe-muted absolute left-3.5 top-1/2 -translate-y-1/2"></i>
                     <input type="text" id="inv-search" placeholder="Search inventory..." 
-                        class="w-full bg-[#E5E5EA]/70 focus:bg-white text-sm rounded-xl pl-10 pr-4 py-2.5 outline-none transition-all">
+                        class="w-full bg-white text-sm rounded-full pl-10 pr-4 py-2 outline-none border border-cafe-border shadow-cafe focus:border-cafe-espresso">
                 </div>
                 <button id="inv-low-filter" onclick="toggleLowStockFilter()" 
-                    class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white text-gray-700 border border-black/5 shadow-ios flex items-center gap-1.5 tap-scale shrink-0">
-                    <span class="w-2 h-2 rounded-full bg-ios-orange"></span>
+                    class="px-3.5 py-2 rounded-full text-xs font-semibold bg-white text-cafe-text border border-cafe-border shadow-cafe flex items-center gap-1.5 tap-scale shrink-0">
+                    <span class="w-2 h-2 rounded-full bg-cafe-orange"></span>
                     <span>Low Stock</span>
                 </button>
             </div>
 
-            <!-- Inventory Stats Bar -->
-            <div class="space-y-2">
-                <div class="grid grid-cols-2 gap-2">
-                    <div class="bg-white p-3 rounded-xl shadow-ios">
-                        <p class="text-[11px] text-ios-gray font-medium">Original Value (Puhunan)</p>
-                        <p id="inv-stat-cost-value" class="text-base font-bold text-gray-900 mt-0.5">₱0.00</p>
-                        <p class="text-[10px] text-ios-gray mt-0.5">Total capital in stock</p>
-                    </div>
-                    <div class="bg-white p-3 rounded-xl shadow-ios">
-                        <p class="text-[11px] text-ios-gray font-medium">Inventory Value (Benta)</p>
-                        <p id="inv-stat-retail-value" class="text-base font-bold text-ios-blue mt-0.5">₱0.00</p>
-                        <p id="inv-stat-est-profit" class="text-[10px] font-semibold text-ios-green mt-0.5">Est. Kita: +₱0.00</p>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2">
-                    <div class="bg-white px-3 py-2 rounded-xl shadow-ios flex items-center justify-between">
-                        <span class="text-[11px] text-ios-gray font-medium">Total Products</span>
-                        <span id="inv-stat-total" class="text-sm font-bold text-black">0</span>
-                    </div>
-                    <div class="bg-white px-3 py-2 rounded-xl shadow-ios flex items-center justify-between">
-                        <span class="text-[11px] text-ios-gray font-medium">Low / Out of Stock</span>
-                        <span id="inv-stat-low" class="text-sm font-bold text-ios-orange">0</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Inventory List -->
+            <!-- Inventory Item Cards -->
             <div id="inv-list" class="space-y-2.5">
                 <!-- Rendered via JS -->
             </div>
         </section>
 
-        <!-- ==================== TAB 3: UTANG & SALES ==================== -->
+        <!-- ==================== TAB 3: UTANG & SALES LEDGER ==================== -->
         <section id="tab-sales" class="hidden space-y-4">
+            <div>
+                <h2 class="font-sans text-xl font-extrabold text-cafe-text">Utang & Sales Ledger</h2>
+                <p class="text-xs text-cafe-muted">Daily collections & suki credit list</p>
+            </div>
+
             <!-- Summary Cards -->
             <div class="grid grid-cols-2 gap-3">
-                <div class="bg-white p-3.5 rounded-2xl shadow-ios">
+                <div class="bg-white p-3.5 rounded-2xl border border-cafe-border shadow-cafe">
                     <div class="flex items-center justify-between mb-1">
-                        <span class="text-xs font-medium text-ios-gray">Today's Collected</span>
-                        <span class="p-1.5 bg-ios-green/10 text-ios-green rounded-lg">
+                        <span class="text-xs font-semibold text-cafe-muted">Today's Collected</span>
+                        <span class="p-1.5 bg-green-50 text-cafe-green rounded-lg">
                             <i data-lucide="banknote" class="w-3.5 h-3.5"></i>
                         </span>
                     </div>
-                    <p id="sales-today-total" class="text-xl font-bold text-black">₱0.00</p>
-                    <p id="sales-breakdown" class="text-[11px] text-ios-gray mt-1">Cash: ₱0 • GCash: ₱0</p>
+                    <p id="sales-today-total" class="font-sans text-xl font-extrabold text-cafe-text tabular-nums">₱0.00</p>
+                    <p id="sales-breakdown" class="text-[11px] text-cafe-muted mt-1 tabular-nums">Cash: ₱0 • GCash: ₱0</p>
                 </div>
 
-                <div class="bg-white p-3.5 rounded-2xl shadow-ios">
+                <div class="bg-white p-3.5 rounded-2xl border border-cafe-border shadow-cafe">
                     <div class="flex items-center justify-between mb-1">
-                        <span class="text-xs font-medium text-ios-gray">Unpaid Utang</span>
-                        <span class="p-1.5 bg-ios-red/10 text-ios-red rounded-lg">
+                        <span class="text-xs font-semibold text-cafe-muted">Unpaid Utang</span>
+                        <span class="p-1.5 bg-red-50 text-cafe-red rounded-lg">
                             <i data-lucide="book-open-check" class="w-3.5 h-3.5"></i>
                         </span>
                     </div>
-                    <p id="sales-unpaid-utang" class="text-xl font-bold text-ios-red">₱0.00</p>
-                    <p id="sales-utang-count" class="text-[11px] text-ios-gray mt-1">0 active accounts</p>
+                    <p id="sales-unpaid-utang" class="font-sans text-xl font-extrabold text-cafe-red tabular-nums">₱0.00</p>
+                    <p id="sales-utang-count" class="text-[11px] text-cafe-muted mt-1">0 active accounts</p>
                 </div>
             </div>
 
-            <!-- iOS Segmented Control -->
-            <div class="bg-[#E5E5EA] p-1 rounded-xl grid grid-cols-2 text-xs font-semibold">
-                <button id="seg-all" onclick="setSalesFilter('all')" class="py-1.5 rounded-lg bg-white text-black shadow-sm transition-all">
+            <!-- Warm Pill Segmented Control -->
+            <div class="bg-cafe-surface p-1 rounded-full grid grid-cols-2 text-xs font-bold border border-cafe-border">
+                <button id="seg-all" onclick="setSalesFilter('all')" class="py-2 rounded-full bg-cafe-espresso text-white shadow-xs transition-all">
                     All Transactions
                 </button>
-                <button id="seg-utang" onclick="setSalesFilter('utang')" class="py-1.5 rounded-lg text-gray-600 transition-all">
+                <button id="seg-utang" onclick="setSalesFilter('utang')" class="py-2 rounded-full text-cafe-muted transition-all">
                     Utang List (Lista)
                 </button>
             </div>
@@ -261,47 +416,75 @@
             </div>
         </section>
 
-        <!-- ==================== TAB 4: REPORTS & DATA ==================== -->
-        <section id="tab-reports" class="hidden space-y-4">
+        <!-- ==================== TAB 4: STORE PROFILE, REPORTS & BACKUP ==================== -->
+        <section id="tab-store" class="hidden space-y-4">
+            <div>
+                <h2 class="font-sans text-xl font-extrabold text-cafe-text">Store & Profit Reports</h2>
+                <p class="text-xs text-cafe-muted">Customize shop name, check kita & backup data</p>
+            </div>
+
+            <!-- Store Name Customizer -->
+            <div class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe space-y-3">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-cafe-caramel flex items-center gap-1.5">
+                    <i data-lucide="store" class="w-4 h-4"></i>
+                    <span>Store Branding</span>
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="text-[11px] font-semibold text-cafe-muted block mb-1">Store / Shop Name</label>
+                        <input type="text" id="setting-store-name" placeholder="Sari-Sari" 
+                            class="w-full bg-cafe-bg rounded-xl px-3 py-2 text-sm font-semibold border border-cafe-border outline-none focus:border-cafe-espresso">
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-semibold text-cafe-muted block mb-1">Tagline / Subtitle</label>
+                        <input type="text" id="setting-store-sub" placeholder="STORE & POS" 
+                            class="w-full bg-cafe-bg rounded-xl px-3 py-2 text-sm font-semibold border border-cafe-border outline-none focus:border-cafe-espresso">
+                    </div>
+                </div>
+                <button onclick="saveStoreBranding()" class="w-full py-2.5 bg-cafe-espresso text-white rounded-xl text-xs font-bold tap-scale">
+                    Update Store Name
+                </button>
+            </div>
+
             <!-- Period Filter -->
-            <div class="bg-[#E5E5EA] p-1 rounded-xl grid grid-cols-3 text-xs font-semibold">
-                <button id="rep-today" onclick="setReportPeriod('today')" class="py-1.5 rounded-lg bg-white text-black shadow-sm transition-all">Today</button>
-                <button id="rep-week" onclick="setReportPeriod('week')" class="py-1.5 rounded-lg text-gray-600 transition-all">Last 7 Days</button>
-                <button id="rep-all" onclick="setReportPeriod('all')" class="py-1.5 rounded-lg text-gray-600 transition-all">All Time</button>
+            <div class="bg-cafe-surface p-1 rounded-full grid grid-cols-3 text-xs font-bold border border-cafe-border">
+                <button id="rep-today" onclick="setReportPeriod('today')" class="py-1.5 rounded-full bg-cafe-espresso text-white shadow-xs transition-all">Today</button>
+                <button id="rep-week" onclick="setReportPeriod('week')" class="py-1.5 rounded-full text-cafe-muted transition-all">Last 7 Days</button>
+                <button id="rep-all" onclick="setReportPeriod('all')" class="py-1.5 rounded-full text-cafe-muted transition-all">All Time</button>
             </div>
 
             <!-- Financial Metrics -->
-            <div class="bg-white rounded-2xl p-4 shadow-ios space-y-4">
-                <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <div class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe space-y-4">
+                <div class="flex items-center justify-between border-b border-cafe-border/60 pb-3">
                     <div>
-                        <p class="text-xs font-medium text-ios-gray">Gross Revenue (Paid)</p>
-                        <p id="rep-revenue" class="text-2xl font-bold text-black mt-0.5">₱0.00</p>
+                        <p class="text-xs font-semibold text-cafe-muted">Gross Revenue (Paid)</p>
+                        <p id="rep-revenue" class="font-sans text-2xl font-extrabold text-cafe-text mt-0.5 tabular-nums">₱0.00</p>
                     </div>
                     <div class="text-right">
-                        <p class="text-xs font-medium text-ios-gray">Net Profit (Kita)</p>
-                        <p id="rep-profit" class="text-2xl font-bold text-ios-green mt-0.5">₱0.00</p>
+                        <p class="text-xs font-semibold text-cafe-muted">Net Profit (Kita)</p>
+                        <p id="rep-profit" class="font-sans text-2xl font-extrabold text-cafe-green mt-0.5 tabular-nums">₱0.00</p>
                     </div>
                 </div>
-                <div class="grid grid-cols-3 gap-2 text-center pt-1">
-                    <div>
-                        <p class="text-[11px] text-ios-gray">Capital / Cost</p>
-                        <p id="rep-cost" class="text-sm font-semibold text-gray-800">₱0.00</p>
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-cafe-bg p-2 rounded-xl">
+                        <p class="text-[10px] text-cafe-muted">Puhunan Cost</p>
+                        <p id="rep-cost" class="text-xs font-bold text-cafe-text mt-0.5">₱0.00</p>
                     </div>
-                    <div>
-                        <p class="text-[11px] text-ios-gray">Margin</p>
-                        <p id="rep-margin" class="text-sm font-semibold text-ios-blue">0%</p>
+                    <div class="bg-cafe-bg p-2 rounded-xl">
+                        <p class="text-[10px] text-cafe-muted">Profit Margin</p>
+                        <p id="rep-margin" class="text-xs font-bold text-cafe-caramel mt-0.5">0%</p>
                     </div>
-                    <div>
-                        <p class="text-[11px] text-ios-gray">Orders</p>
-                        <p id="rep-orders" class="text-sm font-semibold text-gray-800">0</p>
+                    <div class="bg-cafe-bg p-2 rounded-xl">
+                        <p class="text-[10px] text-cafe-muted">Completed Orders</p>
+                        <p id="rep-orders" class="text-xs font-bold text-cafe-text mt-0.5">0</p>
                     </div>
                 </div>
             </div>
 
             <!-- Top Selling Items -->
-            <div class="bg-white rounded-2xl p-4 shadow-ios">
-                <h3 class="text-sm font-bold text-black mb-3 flex items-center gap-1.5">
-                    <i data-lucide="trending-up" class="w-4 h-4 text-ios-blue"></i>
+            <div class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe">
+                <h3 class="text-sm font-bold text-cafe-text mb-3 flex items-center gap-1.5">
+                    <i data-lucide="trending-up" class="w-4 h-4 text-cafe-caramel"></i>
                     <span>Top-Selling Items</span>
                 </h3>
                 <div id="rep-top-items" class="space-y-3">
@@ -309,333 +492,374 @@
                 </div>
             </div>
 
-            <!-- Data Backup & Restore (iOS Safari / GitHub Pages safe) -->
-            <div class="bg-white rounded-2xl p-4 shadow-ios space-y-3">
+            <!-- JSON Data Backup & Restore -->
+            <div class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe space-y-3">
                 <div>
-                    <h3 class="text-sm font-bold text-black flex items-center gap-1.5">
-                        <i data-lucide="database-backup" class="w-4 h-4 text-ios-purple"></i>
+                    <h3 class="text-sm font-bold text-cafe-text flex items-center gap-1.5">
+                        <i data-lucide="database-backup" class="w-4 h-4 text-cafe-espresso"></i>
                         <span>Backup & Restore Data</span>
                     </h3>
-                    <p class="text-xs text-ios-gray mt-1">Export your inventory, sales, and utang records to a JSON file so you never lose data on iOS Safari.</p>
+                    <p class="text-xs text-cafe-muted mt-1">Download a JSON backup of your products, puhunan prices, sales, and utang list for iOS Safari safety.</p>
                 </div>
                 <div class="grid grid-cols-2 gap-2.5 pt-1">
-                    <button onclick="exportDataJSON()" class="py-2.5 px-3 bg-ios-blue text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 tap-scale shadow-sm">
+                    <button onclick="exportDataJSON()" class="py-2.5 px-3 bg-cafe-espresso text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 tap-scale">
                         <i data-lucide="download" class="w-4 h-4"></i>
                         <span>Export JSON</span>
                     </button>
-                    <label class="py-2.5 px-3 bg-gray-100 text-gray-800 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 tap-scale cursor-pointer border border-gray-200">
+                    <label class="py-2.5 px-3 bg-cafe-bg text-cafe-text rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 tap-scale cursor-pointer border border-cafe-border">
                         <i data-lucide="upload" class="w-4 h-4"></i>
                         <span>Import JSON</span>
                         <input type="file" id="import-json-input" accept=".json,application/json" class="hidden" onchange="importDataJSON(event)">
                     </label>
                 </div>
-                <div class="pt-2 border-t border-gray-100 flex justify-between items-center">
-                    <span class="text-[11px] text-ios-gray">Need sample data again?</span>
-                    <button onclick="promptResetDemo()" class="text-[11px] font-semibold text-ios-red">Reset Sample Data</button>
+                <div class="pt-2 border-t border-cafe-border/60 flex justify-between items-center">
+                    <span class="text-[11px] text-cafe-muted">Restore sample items?</span>
+                    <button onclick="promptResetDemo()" class="text-[11px] font-bold text-cafe-red">Reset Sample Data</button>
                 </div>
             </div>
         </section>
 
     </main>
 
-    <!-- ==================== FLOATING CART BAR (POS TAB) ==================== -->
-    <div id="floating-cart-bar" class="hidden fixed left-4 right-4 z-30 max-w-2xl mx-auto transition-all duration-300" style="bottom: calc(74px + env(safe-area-inset-bottom, 0px));">
-        <button onclick="openCartModal()" class="w-full bg-ios-blue text-white rounded-2xl p-3.5 shadow-ios-float flex items-center justify-between tap-scale">
-            <div class="flex items-center gap-3">
-                <div class="bg-white/20 w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm" id="cart-badge-count">0</div>
-                <div class="text-left">
-                    <p class="text-xs font-medium text-white/80">View Basket</p>
-                    <p class="text-sm font-bold leading-tight">Proceed to Checkout</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-2">
-                <span id="cart-bar-total" class="text-lg font-bold">₱0.00</span>
-                <i data-lucide="chevron-up" class="w-5 h-5"></i>
-            </div>
-        </button>
-    </div>
-
-    <!-- ==================== BOTTOM iOS TAB BAR ==================== -->
-    <nav class="fixed bottom-0 left-0 right-0 z-40 ios-blur border-t border-black/10 safe-bottom">
-        <div class="max-w-2xl mx-auto grid grid-cols-4 h-[58px]">
-            <button onclick="switchTab('pos')" id="nav-pos" class="flex flex-col items-center justify-center gap-0.5 text-ios-blue transition-colors">
-                <i data-lucide="store" class="w-5 h-5"></i>
-                <span class="text-[10px] font-semibold">POS</span>
+    <!-- ==================== 5-TAB BOTTOM NAVIGATION WITH CENTER FLOATING ACTION BUTTON ==================== -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white rounded-t-3xl border-t border-cafe-border shadow-cafe-nav safe-bottom">
+        <div class="max-w-xl mx-auto grid grid-cols-5 items-center h-[64px] px-2">
+            <!-- 1. Home / POS -->
+            <button onclick="switchTab('pos')" id="nav-pos" class="flex flex-col items-center justify-center gap-1 text-cafe-espresso transition-colors tap-scale">
+                <i data-lucide="home" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold">Home</span>
             </button>
-            <button onclick="switchTab('inventory')" id="nav-inventory" class="flex flex-col items-center justify-center gap-0.5 text-ios-gray transition-colors relative">
-                <i data-lucide="package" class="w-5 h-5"></i>
-                <span id="nav-low-dot" class="hidden absolute top-2 right-[32%] w-2 h-2 bg-ios-red rounded-full"></span>
+
+            <!-- 2. Inventory / Catalog -->
+            <button onclick="switchTab('inventory')" id="nav-inventory" class="flex flex-col items-center justify-center gap-1 text-cafe-muted transition-colors relative tap-scale">
+                <i data-lucide="book-open" class="w-5 h-5"></i>
+                <span id="nav-low-dot" class="hidden absolute top-1 right-[28%] w-2 h-2 bg-cafe-orange rounded-full"></span>
                 <span class="text-[10px] font-semibold">Inventory</span>
             </button>
-            <button onclick="switchTab('sales')" id="nav-sales" class="flex flex-col items-center justify-center gap-0.5 text-ios-gray transition-colors">
+
+            <!-- 3. Center Floating Espresso Action Button (Order / Checkout) -->
+            <div class="flex flex-col items-center justify-center -mt-6">
+                <button onclick="openCartModal()" class="relative w-14 h-14 rounded-full bg-cafe-espresso text-white shadow-cafe-lg border-4 border-cafe-bg flex flex-col items-center justify-center tap-scale">
+                    <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+                    <span class="text-[9px] font-bold leading-none mt-0.5">Order</span>
+                    <span id="center-cart-badge" class="hidden absolute -top-1 -right-1 bg-cafe-caramel text-white text-[10px] font-extrabold min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center border-2 border-white">0</span>
+                </button>
+            </div>
+
+            <!-- 4. Utang & Sales -->
+            <button onclick="switchTab('sales')" id="nav-sales" class="flex flex-col items-center justify-center gap-1 text-cafe-muted transition-colors tap-scale">
                 <i data-lucide="receipt-text" class="w-5 h-5"></i>
-                <span class="text-[10px] font-semibold">Utang & Sales</span>
+                <span class="text-[10px] font-semibold">Utang</span>
             </button>
-            <button onclick="switchTab('reports')" id="nav-reports" class="flex flex-col items-center justify-center gap-0.5 text-ios-gray transition-colors">
-                <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
-                <span class="text-[10px] font-semibold">Reports</span>
+
+            <!-- 5. Store / Reports -->
+            <button onclick="switchTab('store')" id="nav-store" class="flex flex-col items-center justify-center gap-1 text-cafe-muted transition-colors tap-scale">
+                <i data-lucide="user-circle" class="w-5 h-5"></i>
+                <span class="text-[10px] font-semibold">Store</span>
             </button>
         </div>
     </nav>
 
     <!-- ==================== MODAL 1: CART & CHECKOUT SHEET ==================== -->
-    <div id="cart-modal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end justify-center">
-        <div class="bg-ios-bg w-full max-w-2xl rounded-t-3xl max-h-[90vh] flex flex-col animate-slide-up overflow-hidden">
-            <!-- Modal Header -->
-            <div class="bg-white px-4 py-3.5 border-b border-gray-200 flex items-center justify-between shrink-0">
-                <button onclick="clearCart()" class="text-xs font-semibold text-ios-red">Clear All</button>
-                <h2 class="text-base font-bold text-black">Current Order</h2>
-                <button onclick="closeCartModal()" class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center text-gray-600">
+    <div id="cart-modal" class="hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-end justify-center">
+        <div class="bg-cafe-bg w-full max-w-xl rounded-t-3xl max-h-[90vh] flex flex-col animate-slide-up overflow-hidden">
+            <div class="bg-white px-4 py-3.5 border-b border-cafe-border flex items-center justify-between shrink-0">
+                <button onclick="clearCart()" class="text-xs font-bold text-cafe-red">Clear All</button>
+                <h2 class="font-serif text-lg font-bold text-cafe-text">Order Basket</h2>
+                <button onclick="closeCartModal()" class="w-8 h-8 bg-cafe-bg rounded-full flex items-center justify-center text-cafe-text">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
 
-            <!-- Modal Body -->
             <div class="p-4 overflow-y-auto space-y-4 flex-1">
                 <!-- Cart Items -->
-                <div id="cart-items-list" class="bg-white rounded-2xl divide-y divide-gray-100 shadow-ios overflow-hidden">
+                <div id="cart-items-list" class="bg-white rounded-2xl divide-y divide-cafe-border/60 border border-cafe-border shadow-cafe overflow-hidden">
                     <!-- Rendered via JS -->
                 </div>
 
                 <!-- Payment Method Selector -->
-                <div class="bg-white rounded-2xl p-3.5 shadow-ios space-y-3">
-                    <label class="text-xs font-bold uppercase tracking-wider text-ios-gray block">Payment Method</label>
+                <div class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe space-y-3">
+                    <label class="text-[11px] font-bold uppercase tracking-wider text-cafe-caramel block">Payment Method</label>
                     <div class="grid grid-cols-3 gap-2">
-                        <button type="button" onclick="selectPaymentMethod('Cash')" id="pay-btn-Cash" class="pay-method-btn py-2.5 px-2 rounded-xl border-2 border-ios-blue bg-ios-blue/5 text-ios-blue font-bold text-xs flex flex-col items-center gap-1">
+                        <button type="button" onclick="selectPaymentMethod('Cash')" id="pay-btn-Cash" class="pay-method-btn py-2.5 px-2 rounded-xl border-2 border-cafe-espresso bg-cafe-espresso text-white font-bold text-xs flex flex-col items-center gap-1">
                             <i data-lucide="banknote" class="w-4 h-4"></i>
                             <span>Cash</span>
                         </button>
-                        <button type="button" onclick="selectPaymentMethod('GCash')" id="pay-btn-GCash" class="pay-method-btn py-2.5 px-2 rounded-xl border-2 border-transparent bg-gray-100 text-gray-700 font-bold text-xs flex flex-col items-center gap-1">
+                        <button type="button" onclick="selectPaymentMethod('GCash')" id="pay-btn-GCash" class="pay-method-btn py-2.5 px-2 rounded-xl border-2 border-transparent bg-cafe-bg text-cafe-text font-bold text-xs flex flex-col items-center gap-1">
                             <i data-lucide="smartphone" class="w-4 h-4"></i>
                             <span>GCash</span>
                         </button>
-                        <button type="button" onclick="selectPaymentMethod('Utang')" id="pay-btn-Utang" class="pay-method-btn py-2.5 px-2 rounded-xl border-2 border-transparent bg-gray-100 text-gray-700 font-bold text-xs flex flex-col items-center gap-1">
+                        <button type="button" onclick="selectPaymentMethod('Utang')" id="pay-btn-Utang" class="pay-method-btn py-2.5 px-2 rounded-xl border-2 border-transparent bg-cafe-bg text-cafe-text font-bold text-xs flex flex-col items-center gap-1">
                             <i data-lucide="book-open" class="w-4 h-4"></i>
                             <span>Utang (Lista)</span>
                         </button>
                     </div>
 
-                    <!-- Cash Tendered & Change Calculator -->
-                    <div id="payment-cash-fields" class="pt-2 border-t border-gray-100 space-y-2.5">
+                    <!-- Cash Tendered & Sukli Calculator -->
+                    <div id="payment-cash-fields" class="pt-2 border-t border-cafe-border/60 space-y-2.5">
                         <div class="flex items-center justify-between">
-                            <label class="text-xs font-semibold text-gray-700">Cash Received (Bayad)</label>
-                            <div class="flex gap-1.5" id="quick-cash-buttons">
-                                <!-- Quick bills injected via JS -->
-                            </div>
+                            <label class="text-xs font-bold text-cafe-text">Cash Received (Bayad)</label>
+                            <div class="flex gap-1.5" id="quick-cash-buttons"></div>
                         </div>
                         <div class="relative">
-                            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-gray-500">₱</span>
+                            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-cafe-muted">₱</span>
                             <input type="number" id="cash-tendered" step="0.01" placeholder="Exact amount" oninput="calculateChange()"
-                                class="w-full bg-gray-100 rounded-xl pl-8 pr-4 py-2.5 text-base font-bold outline-none focus:ring-2 focus:ring-ios-blue">
+                                class="w-full bg-cafe-bg rounded-xl pl-8 pr-4 py-2.5 text-base font-bold outline-none border border-cafe-border focus:border-cafe-espresso">
                         </div>
-                        <div class="flex items-center justify-between bg-green-50 px-3 py-2 rounded-xl">
-                            <span class="text-xs font-semibold text-green-800">Sukli (Change):</span>
-                            <span id="cash-change-display" class="text-base font-bold text-ios-green">₱0.00</span>
+                        <div class="flex items-center justify-between bg-green-50/90 px-3.5 py-2.5 rounded-xl border border-green-200/60">
+                            <span class="text-xs font-bold text-green-900">Sukli (Change):</span>
+                            <span id="cash-change-display" class="text-base font-extrabold text-cafe-green">₱0.00</span>
                         </div>
                     </div>
 
-                    <!-- GCash Reference (Optional) -->
-                    <div id="payment-gcash-fields" class="hidden pt-2 border-t border-gray-100">
-                        <label class="text-xs font-semibold text-gray-700 block mb-1">GCash Ref No. (Optional)</label>
+                    <!-- GCash Reference -->
+                    <div id="payment-gcash-fields" class="hidden pt-2 border-t border-cafe-border/60">
+                        <label class="text-xs font-bold text-cafe-text block mb-1">GCash Ref No. (Optional)</label>
                         <input type="text" id="gcash-ref" placeholder="e.g., Last 4 digits" 
-                            class="w-full bg-gray-100 rounded-xl px-3.5 py-2 text-sm outline-none focus:ring-2 focus:ring-ios-blue">
+                            class="w-full bg-cafe-bg rounded-xl px-3.5 py-2.5 text-sm outline-none border border-cafe-border focus:border-cafe-espresso">
                     </div>
 
                     <!-- Utang Customer Details -->
-                    <div id="payment-utang-fields" class="hidden pt-2 border-t border-gray-100 space-y-2.5">
+                    <div id="payment-utang-fields" class="hidden pt-2 border-t border-cafe-border/60 space-y-2.5">
                         <div>
-                            <label class="text-xs font-semibold text-gray-700 block mb-1">Customer Name (Suki) *</label>
+                            <label class="text-xs font-bold text-cafe-text block mb-1">Customer Name (Suki) *</label>
                             <input type="text" id="utang-customer" placeholder="e.g., Aling Nena / Kuya Jun" 
-                                class="w-full bg-gray-100 rounded-xl px-3.5 py-2 text-sm outline-none focus:ring-2 focus:ring-ios-red">
+                                class="w-full bg-cafe-bg rounded-xl px-3.5 py-2.5 text-sm outline-none border border-cafe-border focus:border-cafe-red">
                         </div>
                         <div>
-                            <label class="text-xs font-semibold text-gray-700 block mb-1">Due Date (Petsa ng Bayad)</label>
+                            <label class="text-xs font-bold text-cafe-text block mb-1">Due Date (Petsa ng Bayad)</label>
                             <input type="date" id="utang-due-date" 
-                                class="w-full bg-gray-100 rounded-xl px-3.5 py-2 text-sm outline-none focus:ring-2 focus:ring-ios-red">
+                                class="w-full bg-cafe-bg rounded-xl px-3.5 py-2.5 text-sm outline-none border border-cafe-border focus:border-cafe-red">
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Checkout Footer -->
-            <div class="bg-white p-4 border-t border-gray-200 safe-bottom shrink-0">
+            <div class="bg-white p-4 border-t border-cafe-border safe-bottom shrink-0">
                 <div class="flex items-center justify-between mb-3">
-                    <span class="text-sm font-medium text-ios-gray">Total Amount</span>
-                    <span id="modal-total-amount" class="text-2xl font-extrabold text-black">₱0.00</span>
+                    <span class="text-xs font-bold uppercase tracking-wider text-cafe-muted">Total Amount</span>
+                    <span id="modal-total-amount" class="font-sans text-2xl font-extrabold text-cafe-text tabular-nums">₱0.00</span>
                 </div>
-                <button onclick="completeCheckout()" class="w-full py-3.5 bg-ios-blue text-white rounded-2xl font-bold text-base shadow-md tap-scale flex items-center justify-center gap-2">
+                <button onclick="completeCheckout()" class="w-full py-3.5 bg-cafe-espresso text-white rounded-full font-bold text-sm shadow-cafe-lg tap-scale flex items-center justify-center gap-2">
                     <i data-lucide="check-circle" class="w-5 h-5"></i>
-                    <span>Complete Sale</span>
+                    <span>Complete Order</span>
                 </button>
             </div>
         </div>
     </div>
 
     <!-- ==================== MODAL 2: ADD / EDIT PRODUCT SHEET ==================== -->
-    <div id="product-modal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end justify-center">
-        <div class="bg-ios-bg w-full max-w-2xl rounded-t-3xl max-h-[92vh] flex flex-col animate-slide-up overflow-hidden">
-            <div class="bg-white px-4 py-3.5 border-b border-gray-200 flex items-center justify-between shrink-0">
-                <button onclick="closeProductModal()" class="text-sm font-medium text-ios-gray">Cancel</button>
-                <h2 id="product-modal-title" class="text-base font-bold text-black">Add Product</h2>
-                <button onclick="saveProduct()" class="text-sm font-bold text-ios-blue">Save</button>
+    <div id="product-modal" class="hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-end justify-center">
+        <div class="bg-cafe-bg w-full max-w-xl rounded-t-3xl max-h-[92vh] flex flex-col animate-slide-up overflow-hidden">
+            <div class="bg-white px-4 py-3.5 border-b border-cafe-border flex items-center justify-between shrink-0">
+                <button onclick="closeProductModal()" class="text-xs font-bold text-cafe-muted">Cancel</button>
+                <h2 id="product-modal-title" class="font-serif text-lg font-bold text-cafe-text">Add Product</h2>
+                <button onclick="saveProduct()" class="text-xs font-bold text-cafe-espresso bg-cafe-surface px-3 py-1.5 rounded-full">Save</button>
             </div>
 
             <form id="product-form" onsubmit="event.preventDefault(); saveProduct();" class="p-4 overflow-y-auto space-y-4 flex-1">
                 <input type="hidden" id="prod-id">
 
-                <!-- Image / Icon Picker -->
-                <div class="bg-white rounded-2xl p-4 shadow-ios flex items-center gap-4">
-                    <div id="prod-preview-box" class="w-20 h-20 rounded-2xl bg-blue-50 border border-gray-200 flex items-center justify-center text-4xl overflow-hidden shrink-0">
-                        🥫
+                <!-- Photo / Icon Picker -->
+                <div class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe flex items-center gap-4">
+                    <div id="prod-preview-box" class="w-20 h-20 rounded-2xl bg-cafe-surface border border-cafe-border flex items-center justify-center text-4xl overflow-hidden shrink-0">
+                        ☕
                     </div>
                     <div class="flex-1 space-y-2">
-                        <p class="text-xs font-bold text-gray-800">Product Photo or Icon</p>
+                        <p class="text-xs font-bold text-cafe-text">Product Photo or Icon</p>
                         <div class="flex flex-wrap gap-2">
-                            <label class="px-3 py-1.5 bg-ios-blue text-white rounded-lg text-xs font-semibold cursor-pointer tap-scale flex items-center gap-1">
+                            <label class="px-3 py-1.5 bg-cafe-espresso text-white rounded-full text-xs font-bold cursor-pointer tap-scale flex items-center gap-1">
                                 <i data-lucide="camera" class="w-3.5 h-3.5"></i>
-                                <span>Photo / Camera</span>
+                                <span>Camera / Photo</span>
                                 <input type="file" id="prod-image-input" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
                             </label>
-                            <button type="button" id="remove-photo-btn" onclick="clearProductPhoto()" class="hidden px-2.5 py-1.5 bg-red-50 text-ios-red rounded-lg text-xs font-semibold">
-                                Remove Photo
+                            <button type="button" id="remove-photo-btn" onclick="clearProductPhoto()" class="hidden px-2.5 py-1.5 bg-red-50 text-cafe-red rounded-full text-xs font-bold">
+                                Remove
                             </button>
                         </div>
-                        <!-- Quick Emoji Selector -->
-                        <div class="flex gap-1.5 overflow-x-auto no-scrollbar pt-1" id="emoji-presets">
-                            <!-- Rendered via JS -->
-                        </div>
+                        <div class="flex gap-1.5 overflow-x-auto no-scrollbar pt-1" id="emoji-presets"></div>
                     </div>
                 </div>
 
-                <!-- Basic Details -->
-                <div class="bg-white rounded-2xl p-4 shadow-ios space-y-3">
+                <!-- Product Details -->
+                <div class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe space-y-3">
                     <div>
-                        <label class="text-xs font-semibold text-ios-gray block mb-1">Product Name *</label>
-                        <input type="text" id="prod-name" required placeholder="e.g., CDO Karne Norte 150g" 
-                            class="w-full bg-gray-100 rounded-xl px-3.5 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-ios-blue">
+                        <label class="text-xs font-bold text-cafe-muted block mb-1">Product Name *</label>
+                        <input type="text" id="prod-name" required placeholder="e.g., Iced Spanish Latte / Karne Norte" 
+                            class="w-full bg-cafe-bg rounded-xl px-3.5 py-2.5 text-sm font-semibold border border-cafe-border outline-none focus:border-cafe-espresso">
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-bold text-cafe-muted block mb-1">Short Description / Note</label>
+                        <input type="text" id="prod-desc" placeholder="e.g., Smooth espresso with condensed milk" 
+                            class="w-full bg-cafe-bg rounded-xl px-3.5 py-2 text-xs border border-cafe-border outline-none focus:border-cafe-espresso">
                     </div>
 
                     <div>
                         <div class="flex items-center justify-between mb-1">
-                            <label class="text-xs font-semibold text-ios-gray">Category *</label>
-                            <button type="button" onclick="toggleNewCategoryInput()" class="text-xs font-semibold text-ios-blue">+ New Category</button>
+                            <label class="text-xs font-bold text-cafe-muted">Category *</label>
+                            <button type="button" onclick="toggleNewCategoryInput()" class="text-xs font-bold text-cafe-caramel">+ New Category</button>
                         </div>
-                        <select id="prod-category" class="w-full bg-gray-100 rounded-xl px-3.5 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-ios-blue">
-                            <!-- Populated dynamically -->
-                        </select>
+                        <select id="prod-category" class="w-full bg-cafe-bg rounded-xl px-3.5 py-2.5 text-sm font-semibold border border-cafe-border outline-none focus:border-cafe-espresso"></select>
                         <div id="new-category-box" class="hidden mt-2 flex gap-2">
                             <input type="text" id="new-category-name" placeholder="Enter custom category..." 
-                                class="flex-1 bg-gray-100 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ios-blue">
-                            <button type="button" onclick="addCustomCategory()" class="px-3 py-2 bg-ios-blue text-white rounded-xl text-xs font-bold">Add</button>
+                                class="flex-1 bg-cafe-bg rounded-xl px-3 py-2 text-sm border border-cafe-border outline-none">
+                            <button type="button" onclick="addCustomCategory()" class="px-3.5 py-2 bg-cafe-espresso text-white rounded-xl text-xs font-bold">Add</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Pricing & Stock -->
-                <div class="bg-white rounded-2xl p-4 shadow-ios space-y-3">
+                <div class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe space-y-3">
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="text-xs font-semibold text-ios-gray block mb-1">Selling Price (₱) *</label>
-                            <input type="number" id="prod-price" step="0.01" min="0" required placeholder="0.00" 
-                                class="w-full bg-gray-100 rounded-xl px-3.5 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-ios-blue">
+                            <label class="text-xs font-bold text-cafe-muted block mb-1">Original Cost / Puhunan (₱) *</label>
+                            <input type="number" id="prod-cost" step="0.01" min="0" required placeholder="0.00" 
+                                class="w-full bg-cafe-bg rounded-xl px-3.5 py-2.5 text-sm font-semibold border border-cafe-border outline-none focus:border-cafe-espresso">
                         </div>
                         <div>
-                            <label class="text-xs font-semibold text-ios-gray block mb-1">Cost / Puhunan (₱) *</label>
-                            <input type="number" id="prod-cost" step="0.01" min="0" required placeholder="0.00" 
-                                class="w-full bg-gray-100 rounded-xl px-3.5 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-ios-blue">
+                            <label class="text-xs font-bold text-cafe-muted block mb-1">Selling Price / Benta (₱) *</label>
+                            <input type="number" id="prod-price" step="0.01" min="0" required placeholder="0.00" 
+                                class="w-full bg-cafe-bg rounded-xl px-3.5 py-2.5 text-sm font-bold border border-cafe-border outline-none focus:border-cafe-espresso">
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="text-xs font-semibold text-ios-gray block mb-1">Current Stock *</label>
+                            <label class="text-xs font-bold text-cafe-muted block mb-1">Current Stock *</label>
                             <input type="number" id="prod-stock" min="0" required placeholder="0" 
-                                class="w-full bg-gray-100 rounded-xl px-3.5 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-ios-blue">
+                                class="w-full bg-cafe-bg rounded-xl px-3.5 py-2.5 text-sm font-bold border border-cafe-border outline-none focus:border-cafe-espresso">
                         </div>
                         <div>
-                            <label class="text-xs font-semibold text-ios-gray block mb-1">Low Stock Alert At</label>
+                            <label class="text-xs font-bold text-cafe-muted block mb-1">Low Stock Alert At</label>
                             <input type="number" id="prod-threshold" min="0" value="5" 
-                                class="w-full bg-gray-100 rounded-xl px-3.5 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-ios-blue">
+                                class="w-full bg-cafe-bg rounded-xl px-3.5 py-2.5 text-sm font-semibold border border-cafe-border outline-none focus:border-cafe-espresso">
                         </div>
                     </div>
                 </div>
 
-                <!-- Delete Button (Edit Mode Only) -->
-                <div id="prod-delete-container" class="hidden pt-2 pb-6">
-                    <button type="button" onclick="confirmDeleteProduct()" class="w-full py-3 bg-white text-ios-red rounded-2xl font-semibold text-sm shadow-ios tap-scale">
-                        Delete Product
+                <!-- Delete Product Button -->
+                <div id="prod-delete-container" class="hidden pt-1 pb-6">
+                    <button type="button" onclick="confirmDeleteProduct()" class="w-full py-3 bg-white text-cafe-red border border-red-200 rounded-full font-bold text-xs shadow-cafe tap-scale">
+                        Delete Product from Store
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- ==================== MODAL 3: CUSTOM CONFIRMATION SHEET (NO alert/confirm) ==================== -->
-    <div id="confirm-modal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-        <div class="bg-white/95 backdrop-blur-md w-full max-w-xs rounded-2xl overflow-hidden shadow-ios-float text-center">
-            <div class="p-5">
-                <h3 id="confirm-title" class="text-base font-bold text-black">Confirm Action</h3>
-                <p id="confirm-desc" class="text-xs text-gray-600 mt-1.5 leading-relaxed">Are you sure you want to proceed?</p>
+    <!-- ==================== MODAL 3: ALERTS DRAWER (LOW STOCK & DUE UTANG) ==================== -->
+    <div id="alerts-modal" class="hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-end justify-center">
+        <div class="bg-cafe-bg w-full max-w-xl rounded-t-3xl max-h-[80vh] flex flex-col animate-slide-up overflow-hidden">
+            <div class="bg-white px-4 py-3.5 border-b border-cafe-border flex items-center justify-between">
+                <h2 class="font-serif text-lg font-bold text-cafe-text">Store Notifications</h2>
+                <button onclick="closeAlertsDrawer()" class="w-8 h-8 bg-cafe-bg rounded-full flex items-center justify-center text-cafe-text">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
             </div>
-            <div class="grid grid-cols-2 border-t border-gray-200 divide-x divide-gray-200">
-                <button onclick="closeConfirmModal()" class="py-3 text-sm font-medium text-ios-blue active:bg-gray-100">Cancel</button>
-                <button id="confirm-yes-btn" class="py-3 text-sm font-bold text-ios-red active:bg-gray-100">Confirm</button>
+            <div id="alerts-list" class="p-4 overflow-y-auto space-y-2.5">
+                <!-- Rendered via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 4: CUSTOM CONFIRMATION DIALOG ==================== -->
+    <div id="confirm-modal" class="hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-xs rounded-3xl overflow-hidden shadow-cafe-lg text-center border border-cafe-border">
+            <div class="p-5">
+                <h3 id="confirm-title" class="font-serif text-lg font-bold text-cafe-text">Confirm Action</h3>
+                <p id="confirm-desc" class="text-xs text-cafe-muted mt-1.5 leading-relaxed">Are you sure you want to proceed?</p>
+            </div>
+            <div class="grid grid-cols-2 border-t border-cafe-border divide-x divide-cafe-border">
+                <button onclick="closeConfirmModal()" class="py-3 text-xs font-bold text-cafe-muted active:bg-cafe-bg">Cancel</button>
+                <button id="confirm-yes-btn" class="py-3 text-xs font-bold text-cafe-espresso active:bg-cafe-bg">Confirm</button>
             </div>
         </div>
     </div>
 
     <!-- ==================== JAVASCRIPT APPLICATION LOGIC ==================== -->
     <script>
-        // Storage Keys
         const STORAGE_KEYS = {
-            PRODUCTS: 'tindahan_pos_products_v1',
-            CATEGORIES: 'tindahan_pos_categories_v1',
-            TRANSACTIONS: 'tindahan_pos_transactions_v1'
+            PRODUCTS: 'brew_bliss_pos_products_v2',
+            CATEGORIES: 'sari_sari_pos_categories_v3',
+            TRANSACTIONS: 'brew_bliss_pos_transactions_v2',
+            BRANDING: 'brew_bliss_pos_branding_v2'
         };
 
-        // Default Philippine Sari-Sari Store Categories
-        const DEFAULT_CATEGORIES = ['Beverages', 'Canned Goods', 'Snacks', 'Toiletries', 'Condiments', 'GCash/Load'];
-
-        // Realistic Sample Philippine Sari-Sari Store Products
-        const SAMPLE_PRODUCTS = [
-            { id: 'p1', name: 'CDO Karne Norte 150g', category: 'Canned Goods', price: 28, cost: 22.50, stock: 18, threshold: 5, emoji: '🥫', image: null },
-            { id: 'p2', name: 'San Marino Chili Corned Tuna', category: 'Canned Goods', price: 38, cost: 31.00, stock: 12, threshold: 4, emoji: '🐟', image: null },
-            { id: 'p3', name: '555 Spanish Sardines', category: 'Canned Goods', price: 32, cost: 26.00, stock: 4, threshold: 5, emoji: '🐠', image: null },
-            { id: 'p4', name: 'Nescafe Creamy White Twin', category: 'Beverages', price: 15, cost: 11.50, stock: 36, threshold: 10, emoji: '☕', image: null },
-            { id: 'p5', name: 'Kopiko Blanca Twin Pack', category: 'Beverages', price: 15, cost: 11.50, stock: 28, threshold: 10, emoji: '🤎', image: null },
-            { id: 'p6', name: 'Coca-Cola Mismo 295ml', category: 'Beverages', price: 20, cost: 15.00, stock: 24, threshold: 6, emoji: '🥤', image: null },
-            { id: 'p7', name: 'Datu Puti Soy Sauce 100ml', category: 'Condiments', price: 12, cost: 9.00, stock: 15, threshold: 5, emoji: '🍾', image: null },
-            { id: 'p8', name: 'Alaska Condensada 370g', category: 'Canned Goods', price: 52, cost: 44.00, stock: 8, threshold: 3, emoji: '🥛', image: null },
-            { id: 'p9', name: 'Piattos Cheese 40g', category: 'Snacks', price: 18, cost: 14.00, stock: 14, threshold: 5, emoji: '🥔', image: null },
-            { id: 'p10', name: 'SkyFlakes Crackers Single', category: 'Snacks', price: 8, cost: 6.00, stock: 3, threshold: 8, emoji: '🍘', image: null },
-            { id: 'p11', name: 'Safeguard White 60g', category: 'Toiletries', price: 25, cost: 19.50, stock: 10, threshold: 4, emoji: '🧼', image: null },
-            { id: 'p12', name: 'GCash Cash-In / Load ₱100', category: 'GCash/Load', price: 105, cost: 100.00, stock: 50, threshold: 5, emoji: '📱', image: null }
+        const DEFAULT_CATEGORIES = [
+            'Beverages & Coffee',
+            'Canned Goods',
+            'Instant Noodles',
+            'Snacks & Biscuits',
+            'Condiments',
+            'Bath & Laundry',
+            'School & Load'
         ];
 
-        const EMOJI_OPTIONS = ['🥫', '☕', '🥤', '🍜', '🍚', '🥚', '🍞', '🍪', '🥔', '🧼', '🧴', '🧻', '📱', '🧊', '🍬', '🧂'];
+        // Curated Warm Aesthetic SVG Artwork Generators for Default Items
+        function makeArtSVG(bg1, bg2, emoji, accent) {
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180">
+                <defs>
+                    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="${bg1}"/>
+                        <stop offset="100%" stop-color="${bg2}"/>
+                    </linearGradient>
+                </defs>
+                <rect width="240" height="180" fill="url(#g)"/>
+                <circle cx="120" cy="95" r="54" fill="${accent}" opacity="0.22"/>
+                <text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" font-size="68">${emoji}</text>
+            </svg>`;
+            return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+        }
 
-        // Global App State
+        const SAMPLE_PRODUCTS = [
+            { id: 'p1', name: 'Nescafe Twin Pack', desc: 'Creamy white 3-in-1 instant coffee sachet', category: 'Beverages & Coffee', price: 15, cost: 11.50, stock: 40, threshold: 10, badge: 'BESTSELLER', emoji: '☕', image: makeArtSVG('#3A1F10', '#6E4226', '☕', '#F5D0A9') },
+            { id: 'p2', name: 'Coke Mismo 295ml', desc: 'Chilled classic soft drink bottle', category: 'Beverages & Coffee', price: 18, cost: 14, stock: 24, threshold: 6, badge: 'POPULAR', emoji: '🥤', image: makeArtSVG('#4A2C18', '#8B5A2B', '🥤', '#FFE4C4') },
+            { id: 'p3', name: 'CDO Karne Norte 150g', desc: 'Classic corned beef pantry staple', category: 'Canned Goods', price: 38, cost: 31.50, stock: 16, threshold: 5, badge: "CHEF'S PICK", emoji: '🥫', image: makeArtSVG('#4E1E16', '#8C3B2B', '🥫', '#FADBD8') },
+            { id: 'p4', name: 'Lucky Me Pancit Canton', desc: 'Sweet & Spicy instant noodles pack', category: 'Instant Noodles', price: 16, cost: 12.50, stock: 4, threshold: 8, badge: 'LOW STOCK', emoji: '🍜', image: makeArtSVG('#6E4226', '#B87D4B', '🍜', '#FFF0DB') },
+            { id: 'p5', name: 'SkyFlakes Crackers', desc: 'Crispy salted biscuit pack', category: 'Snacks & Biscuits', price: 9, cost: 6.50, stock: 22, threshold: 6, badge: 'POPULAR', emoji: '🍪', image: makeArtSVG('#4A321F', '#8C6239', '🍪', '#F4E2D0') },
+            { id: 'p6', name: 'Datu Puti Toyo 200ml', desc: 'Classic Filipino soy sauce bottle', category: 'Condiments', price: 16, cost: 12, stock: 18, threshold: 5, badge: 'SARI-SARI', emoji: '🫙', image: makeArtSVG('#2C1810', '#5C3824', '🫙', '#E6B89C') },
+            { id: 'p7', name: 'Safeguard White Bar', desc: 'Germ protection bath soap bar', category: 'Bath & Laundry', price: 26, cost: 21, stock: 14, threshold: 5, badge: 'SARI-SARI', emoji: '🧼', image: makeArtSVG('#3B2314', '#7D4E2D', '🧼', '#F5CBA7') },
+            { id: 'p8', name: 'Mongol Pencil No. 2', desc: 'Classic graphite pencil for school', category: 'School & Load', price: 12, cost: 8.50, stock: 3, threshold: 5, badge: 'LOW STOCK', emoji: '✏️', image: makeArtSVG('#5C3A21', '#9C6B43', '✏️', '#F7E7D7') }
+        ];
+
+        const CATEGORY_ICONS = {
+            'All': `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`,
+            'Beverages & Coffee': `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg>`,
+            'Canned Goods': `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="5" rx="7" ry="2.5"/><path d="M5 5v14c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V5"/><path d="M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5"/></svg>`,
+            'Instant Noodles': `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11h18l-1.5 7.5a2 2 0 0 1-2 1.5h-11a2 2 0 0 1-2-1.5L3 11Z"/><path d="M8 11V6"/><path d="M12 11V4"/><path d="M16 11V6"/></svg>`,
+            'Snacks & Biscuits': `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="9.5" cy="10" r="1"/><circle cx="14.5" cy="9.5" r="1"/><circle cx="12" cy="14.5" r="1"/><circle cx="8.5" cy="14" r="0.8"/></svg>`,
+            'Condiments': `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 3h4v3l2 3v10a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V9l2-3V3Z"/><path d="M8 13h8"/></svg>`,
+            'Bath & Laundry': `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`,
+            'School & Load': `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>`
+        };
+
+        const EMOJI_OPTIONS = ['☕', '🥤', '🥫', '🍜', '🍪', '🫙', '🧼', '✏️', '🥚', '🍚', '🧂', '🍬', '🧴', '🧺', '📱', '🧊'];
         let state = {
             products: [],
             categories: [],
             transactions: [],
-            cart: [], // { productId, qty }
+            branding: { name: 'Sari-Sari', sub: 'STORE & POS' },
+            cart: [],
             activeTab: 'pos',
             selectedCategory: 'All',
             posSearchQuery: '',
+            posStockFilter: 'all', // 'all' | 'low' | 'instock'
             invSearchQuery: '',
             invLowStockOnly: false,
-            salesFilter: 'all', // 'all' | 'utang'
-            reportPeriod: 'today', // 'today' | 'week' | 'all'
+            salesFilter: 'all',
+            reportPeriod: 'today',
             paymentMethod: 'Cash',
             editingProductImage: null,
-            selectedEmoji: '🥫'
+            selectedEmoji: '☕'
         };
 
-        // ==================== INITIALIZATION ====================
+        // ==================== INIT & STORAGE ====================
         function initApp() {
             loadDataFromStorage();
             setupEventListeners();
+            applyBrandingUI();
             renderAll();
             lucide.createIcons();
         }
@@ -645,25 +869,21 @@
                 const savedProducts = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
                 const savedCategories = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
                 const savedTransactions = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+                const savedBranding = localStorage.getItem(STORAGE_KEYS.BRANDING);
 
-                if (savedProducts) {
-                    state.products = JSON.parse(savedProducts);
-                } else {
-                    state.products = JSON.parse(JSON.stringify(SAMPLE_PRODUCTS));
-                    saveProducts();
-                }
+                state.products = savedProducts ? JSON.parse(savedProducts) : JSON.parse(JSON.stringify(SAMPLE_PRODUCTS));
+                if (!savedProducts) saveProducts();
 
-                if (savedCategories) {
-                    state.categories = JSON.parse(savedCategories);
-                } else {
-                    state.categories = [...DEFAULT_CATEGORIES];
-                    saveCategories();
+                state.categories = savedCategories ? JSON.parse(savedCategories) : [...DEFAULT_CATEGORIES];
+                if (!savedCategories) saveCategories();
+
+                if (savedBranding) {
+                    state.branding = JSON.parse(savedBranding);
                 }
 
                 if (savedTransactions) {
                     state.transactions = JSON.parse(savedTransactions);
                 } else {
-                    // Add one realistic sample transaction & one sample utang if brand new
                     const now = new Date();
                     const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
                     state.transactions = [
@@ -671,11 +891,11 @@
                             id: 'TX-' + (Date.now() - 3600000).toString().slice(-6),
                             date: new Date(now.getTime() - 3600000).toISOString(),
                             items: [
-                                { productId: 'p4', name: 'Nescafe Creamy White Twin', price: 15, cost: 11.50, qty: 2 },
-                                { productId: 'p10', name: 'SkyFlakes Crackers Single', price: 8, cost: 6.00, qty: 2 }
+                                { productId: 'p1', name: 'Spanish Latte Iced', price: 85, cost: 42, qty: 2 },
+                                { productId: 'p3', name: 'Chocolate Muffin', price: 55, cost: 28, qty: 1 }
                             ],
-                            total: 46,
-                            totalCost: 35,
+                            total: 225,
+                            totalCost: 112,
                             paymentMethod: 'Cash',
                             status: 'Paid',
                             customerName: '',
@@ -686,11 +906,11 @@
                             id: 'TX-' + (Date.now() - 1800000).toString().slice(-6),
                             date: new Date(now.getTime() - 1800000).toISOString(),
                             items: [
-                                { productId: 'p1', name: 'CDO Karne Norte 150g', price: 28, cost: 22.50, qty: 2 },
-                                { productId: 'p8', name: 'Alaska Condensada 370g', price: 52, cost: 44.00, qty: 1 }
+                                { productId: 'p5', name: 'Clubhouse Sandwich', price: 95, cost: 52, qty: 1 },
+                                { productId: 'p7', name: 'CDO Karne Norte 150g', price: 28, cost: 22.50, qty: 2 }
                             ],
-                            total: 108,
-                            totalCost: 89,
+                            total: 151,
+                            totalCost: 97,
                             paymentMethod: 'Utang',
                             status: 'Unpaid',
                             customerName: 'Aling Nena (Kanto)',
@@ -701,23 +921,32 @@
                     saveTransactions();
                 }
             } catch (err) {
-                console.error('Error loading storage:', err);
-                showToast('Storage load error, using defaults', 'alert-circle', 'text-ios-orange');
+                console.error('Storage error:', err);
             }
         }
 
-        function saveProducts() {
-            localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(state.products));
+        function saveProducts() { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(state.products)); }
+        function saveCategories() { localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(state.categories)); }
+        function saveTransactions() { localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(state.transactions)); }
+        function saveBranding() { localStorage.setItem(STORAGE_KEYS.BRANDING, JSON.stringify(state.branding)); }
+
+        function applyBrandingUI() {
+            document.getElementById('brand-name-display').textContent = state.branding.name || 'Sari-Sari';
+            document.getElementById('brand-sub-display').textContent = `— ${state.branding.sub || 'STORE & POS'} —`;
+            document.getElementById('setting-store-name').value = state.branding.name || '';
+            document.getElementById('setting-store-sub').value = state.branding.sub || '';
         }
-        function saveCategories() {
-            localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(state.categories));
-        }
-        function saveTransactions() {
-            localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(state.transactions));
+
+        function saveStoreBranding() {
+            const name = document.getElementById('setting-store-name').value.trim() || 'Sari-Sari';
+            const sub = document.getElementById('setting-store-sub').value.trim() || 'STORE & POS';
+            state.branding = { name, sub };
+            saveBranding();
+            applyBrandingUI();
+            showToast('Store name updated!');
         }
 
         function setupEventListeners() {
-            // POS Search
             const posSearch = document.getElementById('pos-search');
             const posClear = document.getElementById('pos-search-clear');
             posSearch.addEventListener('input', (e) => {
@@ -732,138 +961,131 @@
                 renderPOSGrid();
             });
 
-            // Inventory Search
             document.getElementById('inv-search').addEventListener('input', (e) => {
                 state.invSearchQuery = e.target.value.trim().toLowerCase();
                 renderInventoryList();
             });
         }
 
-        // ==================== CURRENCY & FORMATTING ====================
+        // ==================== HELPERS ====================
         function formatPHP(amount) {
-            return '₱' + Number(amount || 0).toLocaleString('en-PH', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
+            return '₱' + Number(amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
-
         function formatPHPShort(amount) {
             const num = Number(amount || 0);
             return '₱' + (num % 1 === 0 ? num.toLocaleString('en-PH') : num.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
         }
-
         function formatDateTime(isoString) {
             const d = new Date(isoString);
             return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) + ' • ' +
                    d.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' });
         }
-
         function isToday(isoString) {
             const d = new Date(isoString);
-            const today = new Date();
-            return d.getDate() === today.getDate() &&
-                   d.getMonth() === today.getMonth() &&
-                   d.getFullYear() === today.getFullYear();
+            const t = new Date();
+            return d.getDate() === t.getDate() && d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear();
         }
-
         function isWithinLast7Days(isoString) {
-            const d = new Date(isoString).getTime();
-            const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-            return d >= weekAgo;
+            return new Date(isoString).getTime() >= (Date.now() - 7 * 24 * 60 * 60 * 1000);
         }
 
-        // ==================== TAB NAVIGATION ====================
+        // ==================== NAVIGATION ====================
         function switchTab(tabId) {
             state.activeTab = tabId;
-            const tabs = ['pos', 'inventory', 'sales', 'reports'];
-            
-            tabs.forEach(t => {
+            ['pos', 'inventory', 'sales', 'store'].forEach(t => {
                 document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tabId);
                 const navBtn = document.getElementById(`nav-${t}`);
                 if (t === tabId) {
-                    navBtn.classList.remove('text-ios-gray');
-                    navBtn.classList.add('text-ios-blue');
+                    navBtn.classList.remove('text-cafe-muted');
+                    navBtn.classList.add('text-cafe-espresso');
                 } else {
-                    navBtn.classList.remove('text-ios-blue');
-                    navBtn.classList.add('text-ios-gray');
+                    navBtn.classList.remove('text-cafe-espresso');
+                    navBtn.classList.add('text-cafe-muted');
                 }
             });
 
-            // Update Header Title & Action Button
-            const titleEl = document.getElementById('header-title');
-            const subEl = document.getElementById('header-subtitle');
-            const actionEl = document.getElementById('header-action');
-
-            if (tabId === 'pos') {
-                subEl.textContent = 'Point of Sale';
-                titleEl.textContent = 'TindahanPOS';
-                actionEl.innerHTML = `
-                    <button onclick="openCartModal()" class="relative p-2.5 bg-white rounded-full shadow-ios tap-scale text-ios-blue">
-                        <i data-lucide="shopping-basket" class="w-5 h-5"></i>
-                        <span id="header-cart-dot" class="${state.cart.length ? '' : 'hidden'} absolute -top-1 -right-1 bg-ios-red text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                            ${state.cart.reduce((s, i) => s + i.qty, 0)}
-                        </span>
-                    </button>
-                `;
-                updateFloatingCartBar();
-            } else if (tabId === 'inventory') {
-                subEl.textContent = 'Stock Management';
-                titleEl.textContent = 'Inventory';
-                actionEl.innerHTML = `
-                    <button onclick="openProductModal()" class="px-3.5 py-2 bg-ios-blue text-white rounded-full shadow-ios tap-scale text-xs font-bold flex items-center gap-1">
-                        <i data-lucide="plus" class="w-4 h-4"></i>
-                        <span>Add Item</span>
-                    </button>
-                `;
-                document.getElementById('floating-cart-bar').classList.add('hidden');
-                renderInventoryList();
-            } else if (tabId === 'sales') {
-                subEl.textContent = 'Ledger & Credit';
-                titleEl.textContent = 'Utang & Sales';
-                actionEl.innerHTML = '';
-                document.getElementById('floating-cart-bar').classList.add('hidden');
-                renderSalesTab();
-            } else if (tabId === 'reports') {
-                subEl.textContent = 'Store Analytics';
-                titleEl.textContent = 'Reports & Data';
-                actionEl.innerHTML = '';
-                document.getElementById('floating-cart-bar').classList.add('hidden');
-                renderReportsTab();
-            }
-
+            if (tabId === 'pos') renderPOSHome();
+            if (tabId === 'inventory') renderInventoryList();
+            if (tabId === 'sales') renderSalesTab();
+            if (tabId === 'store') renderReportsTab();
             lucide.createIcons();
         }
 
         function renderAll() {
-            renderPOSCategories();
-            renderPOSGrid();
+            renderPOSHome();
             renderInventoryList();
             renderSalesTab();
             renderReportsTab();
-            updateLowStockBadge();
-            switchTab(state.activeTab);
+            updateBadges();
         }
 
-        function updateLowStockBadge() {
-            const lowCount = state.products.filter(p => p.stock <= p.threshold).length;
-            const dot = document.getElementById('nav-low-dot');
-            if (dot) dot.classList.toggle('hidden', lowCount === 0);
+        function updateBadges() {
+            // Cart badges (Header + Center Floating Button)
+            const totalCartQty = state.cart.reduce((s, i) => s + i.qty, 0);
+            ['header-cart-badge', 'center-cart-badge'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.textContent = totalCartQty;
+                    el.classList.toggle('hidden', totalCartQty === 0);
+                }
+            });
+
+            // Alerts badge (Low stock + Unpaid Utang)
+            const lowStockCount = state.products.filter(p => p.stock <= p.threshold).length;
+            const unpaidUtangCount = state.transactions.filter(t => !t.voided && t.paymentMethod === 'Utang' && t.status === 'Unpaid').length;
+            const totalAlerts = lowStockCount + unpaidUtangCount;
+
+            const alertBadge = document.getElementById('header-alert-badge');
+            if (alertBadge) {
+                alertBadge.textContent = totalAlerts;
+                alertBadge.classList.toggle('hidden', totalAlerts === 0);
+            }
+
+            const lowDot = document.getElementById('nav-low-dot');
+            if (lowDot) lowDot.classList.toggle('hidden', lowStockCount === 0);
         }
 
-        // ==================== TAB 1: POS FUNCTIONS ====================
+        // ==================== TAB 1: POS HOME ====================
+        function renderPOSHome() {
+            // Hero Banner Today's Sales & Kita Pulse
+            const activeTxs = state.transactions.filter(t => !t.voided && t.status === 'Paid' && isToday(t.paidAt || t.date));
+            const todayRev = activeTxs.reduce((s, t) => s + t.total, 0);
+            const todayCost = activeTxs.reduce((s, t) => s + t.totalCost, 0);
+            const todayKita = todayRev - todayCost;
+
+            document.getElementById('hero-today-sales').textContent = formatPHPShort(todayRev);
+            document.getElementById('hero-today-kita').textContent = '+' + formatPHPShort(todayKita);
+
+            // Bottom Inventory Valuation Banner (Original Puhunan vs Inventory Selling Value)
+            const totalCostValue = state.products.reduce((s, p) => s + (p.cost * p.stock), 0);
+            const totalRetailValue = state.products.reduce((s, p) => s + (p.price * p.stock), 0);
+            const estProfit = totalRetailValue - totalCostValue;
+
+            document.getElementById('banner-inv-retail').textContent = formatPHP(totalRetailValue);
+            document.getElementById('banner-inv-cost').textContent = formatPHP(totalCostValue);
+            document.getElementById('banner-inv-profit').textContent = '+' + formatPHPShort(estProfit);
+
+            renderPOSCategories();
+            renderPOSGrid();
+        }
+
         function renderPOSCategories() {
             const container = document.getElementById('pos-categories');
             const allCats = ['All', ...state.categories];
+
             container.innerHTML = allCats.map(cat => {
                 const isSelected = state.selectedCategory === cat;
-                return `
-                    <button onclick="selectPOSCategory('${cat.replace(/'/g, "\\'")}')" 
-                        class="px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all tap-scale ${
+                const iconSVG = CATEGORY_ICONS[cat] || `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg>`;
+                        return `
+                    <button onclick="selectPOSCategory('${cat.replace(/'/g, "\\'")}')" class="flex flex-col items-center gap-1.5 shrink-0 tap-scale group">
+                        <div class="w-14 h-14 rounded-full flex items-center justify-center transition-all border ${
                             isSelected 
-                            ? 'bg-ios-blue text-white shadow-sm' 
-                            : 'bg-white text-gray-700 border border-black/5'
+                            ? 'bg-cafe-espresso text-white border-cafe-espresso shadow-cafe' 
+                            : 'bg-white text-cafe-text border-cafe-border group-hover:border-cafe-caramel'
                         }">
-                        ${cat}
+                            ${iconSVG}
+                        </div>
+                        <span class="text-xs leading-tight whitespace-nowrap ${isSelected ? 'text-cafe-espresso font-bold' : 'text-cafe-muted font-medium'}">${cat}</span>
                     </button>
                 `;
             }).join('');
@@ -871,7 +1093,25 @@
 
         function selectPOSCategory(cat) {
             state.selectedCategory = cat;
+            document.getElementById('pos-section-title').textContent = cat === 'All' ? 'Popular Picks' : cat;
             renderPOSCategories();
+            renderPOSGrid();
+        }
+
+        function cyclePOSStockFilter() {
+            const order = ['all', 'low', 'instock'];
+            const nextIdx = (order.indexOf(state.posStockFilter) + 1) % order.length;
+            state.posStockFilter = order[nextIdx];
+
+            const dot = document.getElementById('pos-filter-dot');
+            dot.classList.toggle('hidden', state.posStockFilter === 'all');
+
+            const labelMap = {
+                'all': 'Showing all items',
+                'low': 'Filter: Low / Out of stock items',
+                'instock': 'Filter: In-stock items only'
+            };
+            showToast(labelMap[state.posStockFilter], 'filter', 'text-amber-300');
             renderPOSGrid();
         }
 
@@ -881,9 +1121,13 @@
 
             const filtered = state.products.filter(p => {
                 const matchesCat = state.selectedCategory === 'All' || p.category === state.selectedCategory;
-                const matchesSearch = p.name.toLowerCase().includes(state.posSearchQuery) || 
+                const matchesSearch = p.name.toLowerCase().includes(state.posSearchQuery) ||
+                                      (p.desc || '').toLowerCase().includes(state.posSearchQuery) ||
                                       p.category.toLowerCase().includes(state.posSearchQuery);
-                return matchesCat && matchesSearch;
+                let matchesStock = true;
+                if (state.posStockFilter === 'low') matchesStock = p.stock <= p.threshold;
+                if (state.posStockFilter === 'instock') matchesStock = p.stock > 0;
+                return matchesCat && matchesSearch && matchesStock;
             });
 
             if (filtered.length === 0) {
@@ -894,63 +1138,83 @@
 
             empty.classList.add('hidden');
             grid.innerHTML = filtered.map(prod => {
-                const inCartItem = state.cart.find(c => c.productId === prod.id);
-                const inCartQty = inCartItem ? inCartItem.qty : 0;
+                const inCart = state.cart.find(c => c.productId === prod.id);
+                const qty = inCart ? inCart.qty : 0;
                 const isOut = prod.stock <= 0;
                 const isLow = prod.stock > 0 && prod.stock <= prod.threshold;
 
-                let stockBadgeClass = 'bg-gray-100 text-gray-600';
-                let stockLabel = `${prod.stock} left`;
+                // Top-left dark pill badge matching reference ("BESTSELLER", "CHEF'S PICK", etc.)
+                let pillText = prod.badge || `${prod.stock} LEFT`;
+                let pillClass = 'bg-cafe-espressoDark/85 text-white';
                 if (isOut) {
-                    stockBadgeClass = 'bg-red-100 text-ios-red font-bold';
-                    stockLabel = 'Out of stock';
+                    pillText = 'OUT OF STOCK';
+                    pillClass = 'bg-cafe-red text-white';
                 } else if (isLow) {
-                    stockBadgeClass = 'bg-orange-100 text-ios-orange font-bold';
-                    stockLabel = `Low: ${prod.stock}`;
+                    pillText = `LOW: ${prod.stock} LEFT`;
+                    pillClass = 'bg-cafe-orange text-white';
                 }
 
-                const visual = prod.image 
-                    ? `<img src="${prod.image}" alt="${prod.name}" class="w-full h-24 object-cover rounded-xl bg-gray-50">`
-                    : `<div class="w-full h-24 rounded-xl bg-gradient-to-br from-blue-50/80 to-indigo-50/80 flex items-center justify-center text-4xl">${prod.emoji || '📦'}</div>`;
+                const visual = prod.image
+                    ? `<img src="${prod.image}" alt="${prod.name}" class="w-full h-28 object-cover rounded-xl bg-cafe-surface">`
+                    : `<div class="w-full h-28 rounded-xl bg-gradient-to-br from-[#3A1F10] to-[#6E4226] flex items-center justify-center text-4xl">${prod.emoji || '☕'}</div>`;
 
                 return `
-                    <div onclick="addToCart('${prod.id}')" 
-                        class="relative bg-white rounded-2xl p-2.5 shadow-ios border border-black/[0.03] flex flex-col justify-between tap-scale cursor-pointer ${isOut ? 'opacity-60' : ''}">
-                        
-                        ${inCartQty > 0 ? `
-                            <div class="absolute -top-2 -right-2 z-10 bg-ios-blue text-white w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shadow-md border-2 border-white">
-                                ${inCartQty}
-                            </div>
-                        ` : ''}
-
-                        <div>
+                    <div class="bg-white rounded-2xl p-2.5 border border-cafe-border shadow-cafe flex flex-col justify-between relative ${isOut ? 'opacity-65' : ''}">
+                        <!-- Image + Top-Left Pill Badge -->
+                        <div onclick="addToCart('${prod.id}')" class="relative cursor-pointer tap-scale">
                             ${visual}
-                            <p class="text-[10px] font-semibold text-ios-gray uppercase tracking-wider mt-2 truncate">${prod.category}</p>
-                            <h3 class="text-xs font-bold text-gray-900 leading-snug line-clamp-2 mt-0.5 min-h-[2rem]">${prod.name}</h3>
+                            <span class="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase ${pillClass} backdrop-blur-xs">
+                                ${pillText}
+                            </span>
+                            ${qty > 0 ? `
+                                <span class="absolute top-2 right-2 w-6 h-6 rounded-full bg-cafe-espresso text-white text-xs font-extrabold flex items-center justify-center border-2 border-white shadow-sm">
+                                    ${qty}
+                                </span>
+                            ` : ''}
                         </div>
 
-                        <div class="flex items-center justify-between mt-2 pt-1.5 border-t border-gray-50">
-                            <span class="text-sm font-extrabold text-ios-blue">${formatPHPShort(prod.price)}</span>
-                            <span class="text-[10px] px-2 py-0.5 rounded-full ${stockBadgeClass}">${stockLabel}</span>
+                        <!-- Product Info -->
+                        <div onclick="addToCart('${prod.id}')" class="mt-2 cursor-pointer">
+                            <h4 class="text-sm font-bold text-cafe-text leading-snug line-clamp-1">${prod.name}</h4>
+                            <p class="text-xs text-cafe-muted line-clamp-2 mt-0.5 leading-snug min-h-[2rem]">${prod.desc || prod.category}</p>
+                            
+                            <!-- Star / Puhunan & Stock Line (Matching ★ 4.8 (1.2K+) in Reference) -->
+                            <div class="flex items-center gap-1 mt-1.5 text-[11px] font-medium text-cafe-muted tabular-nums">
+                                <span class="text-amber-500">★</span>
+                                <span>Stock: <strong class="text-cafe-text font-semibold">${prod.stock}</strong></span>
+                                <span>•</span>
+                                <span>Cost ${formatPHPShort(prod.cost)}</span>
+                            </div>
+                        </div>
+
+                        <!-- Bottom Price & Circular Dark Brown + Button -->
+                        <div class="flex items-center justify-between mt-2 pt-1.5 border-t border-cafe-border/50">
+                            <span class="text-[15px] font-extrabold text-cafe-text tabular-nums">${formatPHP(prod.price)}</span>
+                            <button onclick="addToCart('${prod.id}')" aria-label="Add ${prod.name}"
+                                class="w-7 h-7 rounded-full bg-cafe-espresso text-white flex items-center justify-center tap-scale shadow-xs hover:bg-cafe-espressoDark">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                            </button>
                         </div>
                     </div>
                 `;
             }).join('');
+
+            lucide.createIcons();
         }
 
         function addToCart(productId) {
-            const product = state.products.find(p => p.id === productId);
-            if (!product) return;
+            const prod = state.products.find(p => p.id === productId);
+            if (!prod) return;
 
-            if (product.stock <= 0) {
-                showToast('Out of stock! Restock in Inventory.', 'alert-circle', 'text-ios-red');
+            if (prod.stock <= 0) {
+                showToast('Out of stock! Restock in Inventory.', 'alert-circle', 'text-red-300');
                 return;
             }
 
-            const existing = state.cart.find(item => item.productId === productId);
+            const existing = state.cart.find(c => c.productId === productId);
             if (existing) {
-                if (existing.qty >= product.stock) {
-                    showToast(`Only ${product.stock} pcs available in stock`, 'alert-triangle', 'text-ios-orange');
+                if (existing.qty >= prod.stock) {
+                    showToast(`Only ${prod.stock} pcs in stock`, 'alert-triangle', 'text-amber-300');
                     return;
                 }
                 existing.qty += 1;
@@ -959,76 +1223,44 @@
             }
 
             renderPOSGrid();
-            updateFloatingCartBar();
-            
-            // Update header cart badge
-            const dot = document.getElementById('header-cart-dot');
-            if (dot) {
-                const totalQty = state.cart.reduce((s, i) => s + i.qty, 0);
-                dot.textContent = totalQty;
-                dot.classList.toggle('hidden', totalQty === 0);
-            }
+            updateBadges();
+            showToast(`Added ${prod.name} to basket`);
         }
 
         function getCartTotals() {
-            let total = 0;
-            let totalCost = 0;
-            let count = 0;
-
+            let total = 0, totalCost = 0, count = 0;
             state.cart.forEach(item => {
-                const prod = state.products.find(p => p.id === item.productId);
-                if (prod) {
-                    total += prod.price * item.qty;
-                    totalCost += prod.cost * item.qty;
+                const p = state.products.find(x => x.id === item.productId);
+                if (p) {
+                    total += p.price * item.qty;
+                    totalCost += p.cost * item.qty;
                     count += item.qty;
                 }
             });
-
             return { total, totalCost, count };
-        }
-
-        function updateFloatingCartBar() {
-            const bar = document.getElementById('floating-cart-bar');
-            const { total, count } = getCartTotals();
-
-            if (count === 0 || state.activeTab !== 'pos') {
-                bar.classList.add('hidden');
-                return;
-            }
-
-            document.getElementById('cart-badge-count').textContent = count;
-            document.getElementById('cart-bar-total').textContent = formatPHP(total);
-            bar.classList.remove('hidden');
         }
 
         // ==================== CART & CHECKOUT MODAL ====================
         function openCartModal() {
             if (state.cart.length === 0) {
-                showToast('Your basket is empty', 'shopping-basket', 'text-ios-gray');
+                showToast('Your order basket is empty', 'shopping-bag', 'text-amber-300');
                 return;
             }
             renderCartModalItems();
             selectPaymentMethod(state.paymentMethod);
-            
-            // Set default due date for Utang (7 days from today)
             const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
             document.getElementById('utang-due-date').value = nextWeek;
-            
             document.getElementById('cart-modal').classList.remove('hidden');
             lucide.createIcons();
         }
 
-        function closeCartModal() {
-            document.getElementById('cart-modal').classList.add('hidden');
-        }
+        function closeCartModal() { document.getElementById('cart-modal').classList.add('hidden'); }
 
         function clearCart() {
             state.cart = [];
             closeCartModal();
             renderPOSGrid();
-            updateFloatingCartBar();
-            const dot = document.getElementById('header-cart-dot');
-            if (dot) dot.classList.add('hidden');
+            updateBadges();
         }
 
         function renderCartModalItems() {
@@ -1038,49 +1270,43 @@
             container.innerHTML = state.cart.map(item => {
                 const prod = state.products.find(p => p.id === item.productId);
                 if (!prod) return '';
-                const subtotal = prod.price * item.qty;
-
                 return `
                     <div class="p-3 flex items-center justify-between gap-3">
                         <div class="flex items-center gap-2.5 min-w-0">
-                            <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-xl shrink-0 overflow-hidden">
-                                ${prod.image ? `<img src="${prod.image}" class="w-full h-full object-cover">` : (prod.emoji || '📦')}
+                            <div class="w-11 h-11 rounded-xl bg-cafe-surface flex items-center justify-center text-xl shrink-0 overflow-hidden">
+                                ${prod.image ? `<img src="${prod.image}" class="w-full h-full object-cover">` : (prod.emoji || '☕')}
                             </div>
                             <div class="truncate">
-                                <p class="text-xs font-bold text-gray-900 truncate">${prod.name}</p>
-                                <p class="text-[11px] text-ios-gray">${formatPHPShort(prod.price)} each</p>
+                                <p class="text-xs font-bold text-cafe-text truncate">${prod.name}</p>
+                                <p class="text-[11px] text-cafe-muted">${formatPHPShort(prod.price)} each</p>
                             </div>
                         </div>
 
                         <div class="flex items-center gap-2 shrink-0">
-                            <div class="flex items-center bg-gray-100 rounded-lg p-0.5">
-                                <button onclick="updateCartQty('${prod.id}', -1)" class="w-7 h-7 flex items-center justify-center text-gray-700 font-bold tap-scale">-</button>
+                            <div class="flex items-center bg-cafe-bg rounded-full p-0.5 border border-cafe-border">
+                                <button onclick="updateCartQty('${prod.id}', -1)" class="w-7 h-7 flex items-center justify-center text-cafe-text font-bold tap-scale">-</button>
                                 <span class="w-6 text-center text-xs font-bold">${item.qty}</span>
-                                <button onclick="updateCartQty('${prod.id}', 1)" class="w-7 h-7 flex items-center justify-center text-ios-blue font-bold tap-scale">+</button>
+                                <button onclick="updateCartQty('${prod.id}', 1)" class="w-7 h-7 flex items-center justify-center text-cafe-espresso font-bold tap-scale">+</button>
                             </div>
-                            <span class="w-16 text-right text-xs font-bold text-black">${formatPHPShort(subtotal)}</span>
+                            <span class="w-16 text-right text-xs font-extrabold text-cafe-text">${formatPHPShort(prod.price * item.qty)}</span>
                         </div>
                     </div>
                 `;
             }).join('');
 
             document.getElementById('modal-total-amount').textContent = formatPHP(total);
-            
-            // Setup quick cash denominations
-            const quickBills = [20, 50, 100, 200, 500, 1000].filter(b => b >= total).slice(0, 3);
-            const billsContainer = document.getElementById('quick-cash-buttons');
-            billsContainer.innerHTML = `
-                <button type="button" onclick="setCashTendered(${total})" class="px-2 py-0.5 bg-blue-50 text-ios-blue rounded text-[11px] font-bold">Exact</button>
-                ${quickBills.map(b => `<button type="button" onclick="setCashTendered(${b})" class="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-[11px] font-semibold">₱${b}</button>`).join('')}
-            `;
 
+            const quickBills = [50, 100, 200, 500, 1000].filter(b => b >= total).slice(0, 3);
+            document.getElementById('quick-cash-buttons').innerHTML = `
+                <button type="button" onclick="setCashTendered(${total})" class="px-2.5 py-0.5 bg-cafe-surface text-cafe-espresso rounded-full text-[11px] font-bold">Exact</button>
+                ${quickBills.map(b => `<button type="button" onclick="setCashTendered(${b})" class="px-2.5 py-0.5 bg-cafe-bg text-cafe-text rounded-full text-[11px] font-semibold border border-cafe-border">₱${b}</button>`).join('')}
+            `;
             calculateChange();
         }
 
         function updateCartQty(productId, delta) {
             const idx = state.cart.findIndex(i => i.productId === productId);
             if (idx === -1) return;
-
             const prod = state.products.find(p => p.id === productId);
             const newQty = state.cart[idx].qty + delta;
 
@@ -1088,7 +1314,7 @@
                 state.cart.splice(idx, 1);
             } else {
                 if (prod && newQty > prod.stock) {
-                    showToast(`Max stock reached (${prod.stock})`, 'alert-triangle', 'text-ios-orange');
+                    showToast(`Max stock reached (${prod.stock})`, 'alert-triangle', 'text-amber-300');
                     return;
                 }
                 state.cart[idx].qty = newQty;
@@ -1098,23 +1324,19 @@
                 clearCart();
                 return;
             }
-
             renderCartModalItems();
             renderPOSGrid();
-            updateFloatingCartBar();
+            updateBadges();
         }
 
         function selectPaymentMethod(method) {
             state.paymentMethod = method;
             ['Cash', 'GCash', 'Utang'].forEach(m => {
                 const btn = document.getElementById(`pay-btn-${m}`);
-                if (m === method) {
-                    btn.className = 'pay-method-btn py-2.5 px-2 rounded-xl border-2 border-ios-blue bg-ios-blue/5 text-ios-blue font-bold text-xs flex flex-col items-center gap-1';
-                } else {
-                    btn.className = 'pay-method-btn py-2.5 px-2 rounded-xl border-2 border-transparent bg-gray-100 text-gray-700 font-bold text-xs flex flex-col items-center gap-1';
-                }
+                btn.className = m === method
+                    ? 'pay-method-btn py-2.5 px-2 rounded-xl border-2 border-cafe-espresso bg-cafe-espresso text-white font-bold text-xs flex flex-col items-center gap-1'
+                    : 'pay-method-btn py-2.5 px-2 rounded-xl border-2 border-transparent bg-cafe-bg text-cafe-text font-bold text-xs flex flex-col items-center gap-1';
             });
-
             document.getElementById('payment-cash-fields').classList.toggle('hidden', method !== 'Cash');
             document.getElementById('payment-gcash-fields').classList.toggle('hidden', method !== 'GCash');
             document.getElementById('payment-utang-fields').classList.toggle('hidden', method !== 'Utang');
@@ -1127,41 +1349,38 @@
 
         function calculateChange() {
             const { total } = getCartTotals();
-            const tenderedInput = document.getElementById('cash-tendered').value;
-            const tendered = tenderedInput === '' ? total : parseFloat(tenderedInput);
+            const val = document.getElementById('cash-tendered').value;
+            const tendered = val === '' ? total : parseFloat(val);
             const change = tendered - total;
-
             const display = document.getElementById('cash-change-display');
+
             if (change < 0) {
                 display.textContent = 'Kululang ng ' + formatPHP(Math.abs(change));
-                display.className = 'text-sm font-bold text-ios-red';
+                display.className = 'text-sm font-extrabold text-cafe-red';
             } else {
                 display.textContent = formatPHP(change);
-                display.className = 'text-base font-bold text-ios-green';
+                display.className = 'text-base font-extrabold text-cafe-green';
             }
         }
 
         function completeCheckout() {
             if (state.cart.length === 0) return;
-
             const { total, totalCost } = getCartTotals();
             const method = state.paymentMethod;
-            let customerName = '';
-            let dueDate = '';
-            let refNote = '';
+            let customerName = '', dueDate = '', refNote = '';
 
             if (method === 'Cash') {
-                const tenderedInput = document.getElementById('cash-tendered').value;
-                const tendered = tenderedInput === '' ? total : parseFloat(tenderedInput);
+                const val = document.getElementById('cash-tendered').value;
+                const tendered = val === '' ? total : parseFloat(val);
                 if (tendered < total) {
-                    showToast('Insufficient cash tendered!', 'alert-circle', 'text-ios-red');
+                    showToast('Insufficient cash received!', 'alert-circle', 'text-red-300');
                     return;
                 }
             } else if (method === 'Utang') {
                 customerName = document.getElementById('utang-customer').value.trim();
                 dueDate = document.getElementById('utang-due-date').value;
                 if (!customerName) {
-                    showToast('Please enter Customer Name for Utang', 'user-x', 'text-ios-red');
+                    showToast('Enter Customer Name for Utang', 'user-x', 'text-red-300');
                     document.getElementById('utang-customer').focus();
                     return;
                 }
@@ -1169,23 +1388,16 @@
                 refNote = document.getElementById('gcash-ref').value.trim();
             }
 
-            // Build transaction items & deduct inventory
             const txItems = [];
             state.cart.forEach(cartItem => {
                 const prod = state.products.find(p => p.id === cartItem.productId);
                 if (prod) {
                     prod.stock = Math.max(0, prod.stock - cartItem.qty);
-                    txItems.push({
-                        productId: prod.id,
-                        name: prod.name,
-                        price: prod.price,
-                        cost: prod.cost,
-                        qty: cartItem.qty
-                    });
+                    txItems.push({ productId: prod.id, name: prod.name, price: prod.price, cost: prod.cost, qty: cartItem.qty });
                 }
             });
 
-            const newTx = {
+            state.transactions.unshift({
                 id: 'TX-' + Date.now().toString().slice(-6),
                 date: new Date().toISOString(),
                 items: txItems,
@@ -1197,13 +1409,10 @@
                 dueDate,
                 refNote,
                 voided: false
-            };
+            });
 
-            state.transactions.unshift(newTx);
             saveProducts();
             saveTransactions();
-
-            // Reset Cart & Inputs
             state.cart = [];
             document.getElementById('cash-tendered').value = '';
             document.getElementById('utang-customer').value = '';
@@ -1211,25 +1420,21 @@
 
             closeCartModal();
             renderAll();
-            showToast(method === 'Utang' ? `Utang recorded for ${customerName}` : 'Sale completed! Stock updated.');
+            showToast(method === 'Utang' ? `Utang listed for ${customerName}` : 'Order completed! Stock updated.');
         }
 
-        // ==================== TAB 2: INVENTORY FUNCTIONS ====================
+        // ==================== TAB 2: INVENTORY ====================
         function toggleLowStockFilter() {
             state.invLowStockOnly = !state.invLowStockOnly;
             const btn = document.getElementById('inv-low-filter');
-            if (state.invLowStockOnly) {
-                btn.className = 'px-3.5 py-2 rounded-xl text-xs font-bold bg-ios-orange text-white shadow-ios flex items-center gap-1.5 tap-scale shrink-0';
-            } else {
-                btn.className = 'px-3.5 py-2 rounded-xl text-xs font-semibold bg-white text-gray-700 border border-black/5 shadow-ios flex items-center gap-1.5 tap-scale shrink-0';
-            }
+            btn.className = state.invLowStockOnly
+                ? 'px-3.5 py-2 rounded-full text-xs font-bold bg-cafe-orange text-white shadow-cafe flex items-center gap-1.5 tap-scale shrink-0'
+                : 'px-3.5 py-2 rounded-full text-xs font-semibold bg-white text-cafe-text border border-cafe-border shadow-cafe flex items-center gap-1.5 tap-scale shrink-0';
             renderInventoryList();
         }
 
         function renderInventoryList() {
             const list = document.getElementById('inv-list');
-            
-            // Stats
             const totalItems = state.products.length;
             const lowItems = state.products.filter(p => p.stock <= p.threshold).length;
             const totalCostValue = state.products.reduce((sum, p) => sum + (p.cost * p.stock), 0);
@@ -1243,20 +1448,13 @@
             document.getElementById('inv-stat-est-profit').textContent = `Est. Kita: +${formatPHPShort(estInventoryProfit)}`;
 
             const filtered = state.products.filter(p => {
-                const matchesSearch = p.name.toLowerCase().includes(state.invSearchQuery) || 
-                                      p.category.toLowerCase().includes(state.invSearchQuery);
+                const matchesSearch = p.name.toLowerCase().includes(state.invSearchQuery) || p.category.toLowerCase().includes(state.invSearchQuery);
                 const matchesLow = !state.invLowStockOnly || p.stock <= p.threshold;
                 return matchesSearch && matchesLow;
             });
 
             if (filtered.length === 0) {
-                list.innerHTML = `
-                    <div class="bg-white rounded-2xl p-8 text-center shadow-ios">
-                        <p class="text-3xl mb-2">📦</p>
-                        <p class="text-sm font-bold text-gray-800">No inventory items match</p>
-                        <p class="text-xs text-ios-gray mt-1">Tap "+ Add Item" above to add products.</p>
-                    </div>
-                `;
+                list.innerHTML = `<div class="bg-white rounded-2xl p-8 text-center border border-cafe-border"><p class="text-3xl mb-2">📦</p><p class="text-sm font-bold text-cafe-text">No inventory items match</p></div>`;
                 return;
             }
 
@@ -1265,40 +1463,36 @@
                 const isLow = prod.stock > 0 && prod.stock <= prod.threshold;
                 const profitPerUnit = prod.price - prod.cost;
 
-                let statusBadge = `<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-green-100 text-ios-green">${prod.stock} in stock</span>`;
-                if (isOut) {
-                    statusBadge = `<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-ios-red">Out of stock (0)</span>`;
-                } else if (isLow) {
-                    statusBadge = `<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-orange-100 text-ios-orange">Low stock: ${prod.stock}</span>`;
-                }
+                let statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-cafe-green border border-green-200/70">${prod.stock} in stock</span>`;
+                if (isOut) statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-cafe-red border border-red-200/70">Out of stock</span>`;
+                else if (isLow) statusBadge = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-cafe-orange border border-amber-200/70">Low: ${prod.stock} left</span>`;
 
                 return `
-                    <div onclick="openProductModal('${prod.id}')" class="bg-white rounded-2xl p-3 shadow-ios flex items-center justify-between gap-3 tap-scale cursor-pointer">
+                    <div onclick="openProductModal('${prod.id}')" class="bg-white rounded-2xl p-3 border border-cafe-border shadow-cafe flex items-center justify-between gap-3 tap-scale cursor-pointer">
                         <div class="flex items-center gap-3 min-w-0">
-                            <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center text-2xl shrink-0 overflow-hidden border border-gray-100">
-                                ${prod.image ? `<img src="${prod.image}" class="w-full h-full object-cover">` : (prod.emoji || '📦')}
+                            <div class="w-12 h-12 rounded-xl bg-cafe-surface flex items-center justify-center text-2xl shrink-0 overflow-hidden border border-cafe-border/60">
+                                ${prod.image ? `<img src="${prod.image}" class="w-full h-full object-cover">` : (prod.emoji || '☕')}
                             </div>
                             <div class="min-w-0">
-                                <p class="text-[10px] font-semibold text-ios-gray uppercase">${prod.category}</p>
-                                <h4 class="text-sm font-bold text-gray-900 truncate">${prod.name}</h4>
-                                <div class="flex items-center gap-2 mt-0.5 text-xs">
-                                    <span class="font-bold text-ios-blue">${formatPHPShort(prod.price)}</span>
-                                    <span class="text-gray-400">•</span>
-                                    <span class="text-ios-gray text-[11px]">Cost: ${formatPHPShort(prod.cost)} (+${formatPHPShort(profitPerUnit)})</span>
+                                <p class="text-[10px] font-bold text-cafe-caramel uppercase tracking-wider">${prod.category}</p>
+                                <h4 class="text-sm font-bold text-cafe-text truncate">${prod.name}</h4>
+                                <div class="flex items-center gap-1.5 mt-0.5 text-[11px]">
+                                    <span class="font-extrabold text-cafe-espresso">Benta: ${formatPHPShort(prod.price)}</span>
+                                    <span class="text-cafe-muted">•</span>
+                                    <span class="text-cafe-muted">Puhunan: ${formatPHPShort(prod.cost)} (<span class="text-cafe-green font-semibold">+${formatPHPShort(profitPerUnit)}</span>)</span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="flex flex-col items-end gap-1.5 shrink-0">
                             ${statusBadge}
-                            <span class="text-[11px] text-ios-blue font-medium flex items-center gap-0.5">
+                            <span class="text-[11px] text-cafe-caramel font-bold flex items-center gap-0.5">
                                 Edit <i data-lucide="chevron-right" class="w-3 h-3"></i>
                             </span>
                         </div>
                     </div>
                 `;
             }).join('');
-
             lucide.createIcons();
         }
 
@@ -1307,9 +1501,7 @@
             const modal = document.getElementById('product-modal');
             const title = document.getElementById('product-modal-title');
             const deleteContainer = document.getElementById('prod-delete-container');
-            const newCatBox = document.getElementById('new-category-box');
-            
-            newCatBox.classList.add('hidden');
+            document.getElementById('new-category-box').classList.add('hidden');
             populateCategoryDropdown();
             renderEmojiPresets();
 
@@ -1319,22 +1511,22 @@
                 title.textContent = 'Edit Product';
                 document.getElementById('prod-id').value = prod.id;
                 document.getElementById('prod-name').value = prod.name;
+                document.getElementById('prod-desc').value = prod.desc || '';
                 document.getElementById('prod-category').value = prod.category;
                 document.getElementById('prod-price').value = prod.price;
                 document.getElementById('prod-cost').value = prod.cost;
                 document.getElementById('prod-stock').value = prod.stock;
                 document.getElementById('prod-threshold').value = prod.threshold;
-                
                 state.editingProductImage = prod.image || null;
-                state.selectedEmoji = prod.emoji || '📦';
+                state.selectedEmoji = prod.emoji || '☕';
                 deleteContainer.classList.remove('hidden');
             } else {
-                title.textContent = 'Add New Product';
+                title.textContent = 'Add Store Item';
                 document.getElementById('product-form').reset();
                 document.getElementById('prod-id').value = '';
                 document.getElementById('prod-threshold').value = 5;
                 state.editingProductImage = null;
-                state.selectedEmoji = '🥫';
+                state.selectedEmoji = '☕';
                 deleteContainer.classList.add('hidden');
             }
 
@@ -1343,13 +1535,10 @@
             lucide.createIcons();
         }
 
-        function closeProductModal() {
-            document.getElementById('product-modal').classList.add('hidden');
-        }
+        function closeProductModal() { document.getElementById('product-modal').classList.add('hidden'); }
 
         function populateCategoryDropdown(selectedCat = null) {
-            const select = document.getElementById('prod-category');
-            select.innerHTML = state.categories.map(cat => 
+            document.getElementById('prod-category').innerHTML = state.categories.map(cat =>
                 `<option value="${cat}" ${cat === selectedCat ? 'selected' : ''}>${cat}</option>`
             ).join('');
         }
@@ -1357,16 +1546,13 @@
         function toggleNewCategoryInput() {
             const box = document.getElementById('new-category-box');
             box.classList.toggle('hidden');
-            if (!box.classList.contains('hidden')) {
-                document.getElementById('new-category-name').focus();
-            }
+            if (!box.classList.contains('hidden')) document.getElementById('new-category-name').focus();
         }
 
         function addCustomCategory() {
             const input = document.getElementById('new-category-name');
             const newCat = input.value.trim();
             if (!newCat) return;
-
             if (!state.categories.includes(newCat)) {
                 state.categories.push(newCat);
                 saveCategories();
@@ -1378,12 +1564,8 @@
         }
 
         function renderEmojiPresets() {
-            const container = document.getElementById('emoji-presets');
-            container.innerHTML = EMOJI_OPTIONS.map(em => `
-                <button type="button" onclick="selectProductEmoji('${em}')" 
-                    class="w-7 h-7 rounded-lg bg-gray-100 hover:bg-blue-100 flex items-center justify-center text-base shrink-0">
-                    ${em}
-                </button>
+            document.getElementById('emoji-presets').innerHTML = EMOJI_OPTIONS.map(em => `
+                <button type="button" onclick="selectProductEmoji('${em}')" class="w-7 h-7 rounded-lg bg-cafe-bg hover:bg-cafe-surface flex items-center justify-center text-base shrink-0 border border-cafe-border/50">${em}</button>
             `).join('');
         }
 
@@ -1411,38 +1593,21 @@
             }
         }
 
-        // Compress Image to Base64 Data URL so localStorage never fills up
         function handleImageUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 const img = new Image();
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    const MAX_SIZE = 240; // Compact thumbnail size for fast localStorage
-                    let width = img.width;
-                    let height = img.height;
-
-                    if (width > height) {
-                        if (width > MAX_SIZE) {
-                            height *= MAX_SIZE / width;
-                            width = MAX_SIZE;
-                        }
-                    } else {
-                        if (height > MAX_SIZE) {
-                            width *= MAX_SIZE / height;
-                            height = MAX_SIZE;
-                        }
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    state.editingProductImage = canvas.toDataURL('image/jpeg', 0.75);
+                    const MAX_SIZE = 280;
+                    let w = img.width, h = img.height;
+                    if (w > h) { if (w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; } }
+                    else { if (h > MAX_SIZE) { w *= MAX_SIZE / h; h = MAX_SIZE; } }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    state.editingProductImage = canvas.toDataURL('image/jpeg', 0.78);
                     updateProductPreview();
                 };
                 img.src = e.target.result;
@@ -1453,6 +1618,7 @@
         function saveProduct() {
             const id = document.getElementById('prod-id').value;
             const name = document.getElementById('prod-name').value.trim();
+            const desc = document.getElementById('prod-desc').value.trim();
             const category = document.getElementById('prod-category').value;
             const price = parseFloat(document.getElementById('prod-price').value);
             const cost = parseFloat(document.getElementById('prod-cost').value);
@@ -1460,30 +1626,25 @@
             const threshold = parseInt(document.getElementById('prod-threshold').value, 10) || 5;
 
             if (!name || isNaN(price) || isNaN(cost) || isNaN(stock)) {
-                showToast('Please fill all required fields', 'alert-circle', 'text-ios-red');
+                showToast('Fill all required fields', 'alert-circle', 'text-red-300');
                 return;
             }
 
             if (id) {
                 const idx = state.products.findIndex(p => p.id === id);
                 if (idx !== -1) {
-                    state.products[idx] = {
-                        ...state.products[idx],
-                        name, category, price, cost, stock, threshold,
-                        image: state.editingProductImage,
-                        emoji: state.selectedEmoji
-                    };
+                    state.products[idx] = { ...state.products[idx], name, desc, category, price, cost, stock, threshold, image: state.editingProductImage, emoji: state.selectedEmoji };
                 }
                 showToast('Product updated');
             } else {
-                const newProd = {
+                state.products.unshift({
                     id: 'p_' + Date.now(),
-                    name, category, price, cost, stock, threshold,
+                    name, desc, category, price, cost, stock, threshold,
+                    badge: 'NEW',
                     image: state.editingProductImage,
                     emoji: state.selectedEmoji
-                };
-                state.products.unshift(newProd);
-                showToast('New product added');
+                });
+                showToast('New item added to store');
             }
 
             saveProducts();
@@ -1494,56 +1655,37 @@
         function confirmDeleteProduct() {
             const id = document.getElementById('prod-id').value;
             if (!id) return;
-            openConfirmModal(
-                'Delete Product?',
-                'This item will be permanently removed from your inventory.',
-                () => {
-                    state.products = state.products.filter(p => p.id !== id);
-                    saveProducts();
-                    closeProductModal();
-                    renderAll();
-                    showToast('Product deleted', 'trash-2', 'text-ios-red');
-                }
-            );
+            openConfirmModal('Delete Item?', 'Remove this product permanently from your store inventory?', () => {
+                state.products = state.products.filter(p => p.id !== id);
+                saveProducts();
+                closeProductModal();
+                renderAll();
+                showToast('Item removed', 'trash-2', 'text-red-300');
+            });
         }
 
-        // ==================== TAB 3: UTANG & SALES FUNCTIONS ====================
+        // ==================== TAB 3: UTANG & SALES ====================
         function setSalesFilter(filter) {
             state.salesFilter = filter;
-            const btnAll = document.getElementById('seg-all');
-            const btnUtang = document.getElementById('seg-utang');
-
-            if (filter === 'all') {
-                btnAll.className = 'py-1.5 rounded-lg bg-white text-black shadow-sm transition-all';
-                btnUtang.className = 'py-1.5 rounded-lg text-gray-600 transition-all';
-            } else {
-                btnUtang.className = 'py-1.5 rounded-lg bg-white text-black shadow-sm transition-all';
-                btnAll.className = 'py-1.5 rounded-lg text-gray-600 transition-all';
-            }
+            document.getElementById('seg-all').className = filter === 'all'
+                ? 'py-2 rounded-full bg-cafe-espresso text-white shadow-xs transition-all'
+                : 'py-2 rounded-full text-cafe-muted transition-all';
+            document.getElementById('seg-utang').className = filter === 'utang'
+                ? 'py-2 rounded-full bg-cafe-espresso text-white shadow-xs transition-all'
+                : 'py-2 rounded-full text-cafe-muted transition-all';
             renderSalesTab();
         }
 
         function renderSalesTab() {
-            // Calculate Summary Metrics (excluding voided transactions)
             const activeTxs = state.transactions.filter(t => !t.voided);
-            
-            let todayCash = 0;
-            let todayGCash = 0;
-            let totalUnpaidUtang = 0;
-            let unpaidUtangCount = 0;
+            let todayCash = 0, todayGCash = 0, totalUnpaidUtang = 0, unpaidUtangCount = 0;
 
             activeTxs.forEach(tx => {
-                // Collected sales today (either paid today, or Utang marked paid today)
                 const paidDate = tx.paidAt || tx.date;
                 if (tx.status === 'Paid' && isToday(paidDate)) {
-                    if (tx.paymentMethod === 'GCash') {
-                        todayGCash += tx.total;
-                    } else {
-                        // Cash or settled Utang defaults to Cash collected
-                        todayCash += tx.total;
-                    }
+                    if (tx.paymentMethod === 'GCash') todayGCash += tx.total;
+                    else todayCash += tx.total;
                 }
-
                 if (tx.paymentMethod === 'Utang' && tx.status === 'Unpaid') {
                     totalUnpaidUtang += tx.total;
                     unpaidUtangCount += 1;
@@ -1555,20 +1697,13 @@
             document.getElementById('sales-unpaid-utang').textContent = formatPHP(totalUnpaidUtang);
             document.getElementById('sales-utang-count').textContent = `${unpaidUtangCount} unpaid account${unpaidUtangCount === 1 ? '' : 's'}`;
 
-            // Filter Transactions List
             const listContainer = document.getElementById('transactions-list');
             const displayTxs = state.salesFilter === 'utang'
                 ? state.transactions.filter(t => t.paymentMethod === 'Utang' && !t.voided)
                 : state.transactions;
 
             if (displayTxs.length === 0) {
-                listContainer.innerHTML = `
-                    <div class="bg-white rounded-2xl p-8 text-center shadow-ios">
-                        <p class="text-3xl mb-2">🧾</p>
-                        <p class="text-sm font-bold text-gray-800">No records found</p>
-                        <p class="text-xs text-ios-gray mt-1">Completed sales and utang entries will appear here.</p>
-                    </div>
-                `;
+                listContainer.innerHTML = `<div class="bg-white rounded-2xl p-8 text-center border border-cafe-border"><p class="text-3xl mb-2">🧾</p><p class="text-sm font-bold text-cafe-text">No records found</p></div>`;
                 return;
             }
 
@@ -1577,47 +1712,38 @@
                 const isUtang = tx.paymentMethod === 'Utang';
                 const isUnpaid = isUtang && tx.status === 'Unpaid';
 
-                let badgeHTML = '';
-                if (isVoided) {
-                    badgeHTML = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-200 text-gray-600">VOIDED</span>`;
-                } else if (isUnpaid) {
-                    badgeHTML = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-ios-red">UNPAID UTANG</span>`;
-                } else if (isUtang && tx.status === 'Paid') {
-                    badgeHTML = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-ios-green">UTANG PAID</span>`;
-                } else if (tx.paymentMethod === 'GCash') {
-                    badgeHTML = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-ios-blue">GCASH</span>`;
-                } else {
-                    badgeHTML = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-ios-green">CASH</span>`;
-                }
+                let badgeHTML = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-cafe-green">CASH</span>`;
+                if (isVoided) badgeHTML = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500">VOIDED</span>`;
+                else if (isUnpaid) badgeHTML = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-cafe-red">UNPAID UTANG</span>`;
+                else if (isUtang) badgeHTML = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-cafe-green">UTANG PAID</span>`;
+                else if (tx.paymentMethod === 'GCash') badgeHTML = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700">GCASH</span>`;
 
                 const itemSummary = tx.items.map(i => `${i.qty}x ${i.name}`).join(', ');
 
                 return `
-                    <div class="bg-white rounded-2xl p-3.5 shadow-ios space-y-2.5 ${isVoided ? 'opacity-60' : ''}">
+                    <div class="bg-white rounded-2xl p-3.5 border border-cafe-border shadow-cafe space-y-2.5 ${isVoided ? 'opacity-60' : ''}">
                         <div class="flex items-start justify-between gap-2">
                             <div>
                                 <div class="flex items-center gap-2">
-                                    <span class="text-xs font-bold text-gray-900">${isUtang ? tx.customerName : tx.id}</span>
+                                    <span class="text-xs font-bold text-cafe-text">${isUtang ? tx.customerName : tx.id}</span>
                                     ${badgeHTML}
                                 </div>
-                                <p class="text-[11px] text-ios-gray mt-0.5">${formatDateTime(tx.date)} ${tx.dueDate && isUnpaid ? `• Due: <span class="text-ios-red font-semibold">${tx.dueDate}</span>` : ''}</p>
+                        <p class="text-xs text-cafe-muted mt-0.5">${formatDateTime(tx.date)} ${tx.dueDate && isUnpaid ? `• Due: <span class="text-cafe-red font-bold">${tx.dueDate}</span>` : ''}</p>
                             </div>
-                            <span class="text-base font-extrabold ${isVoided ? 'line-through text-gray-400' : (isUnpaid ? 'text-ios-red' : 'text-black')}">
+                            <span class="font-sans text-base font-extrabold tabular-nums ${isVoided ? 'line-through text-gray-400' : (isUnpaid ? 'text-cafe-red' : 'text-cafe-text')}">
                                 ${formatPHP(tx.total)}
                             </span>
                         </div>
-
-                        <p class="text-xs text-gray-600 bg-gray-50 p-2 rounded-xl leading-relaxed">${itemSummary}</p>
-
+                        <p class="text-xs text-cafe-muted bg-cafe-bg p-2.5 rounded-xl leading-relaxed">${itemSummary}</p>
                         ${!isVoided ? `
-                            <div class="flex items-center justify-end gap-2 pt-1">
+                            <div class="flex items-center justify-end gap-2 pt-0.5">
                                 ${isUnpaid ? `
-                                    <button onclick="markUtangPaid('${tx.id}')" class="px-3 py-1.5 bg-ios-green text-white rounded-xl text-xs font-bold tap-scale flex items-center gap-1 shadow-xs">
+                                    <button onclick="markUtangPaid('${tx.id}')" class="px-3.5 py-1.5 bg-cafe-espresso text-white rounded-full text-xs font-bold tap-scale flex items-center gap-1">
                                         <i data-lucide="check" class="w-3.5 h-3.5"></i>
                                         <span>Mark as Paid</span>
                                     </button>
                                 ` : ''}
-                                <button onclick="promptVoidTransaction('${tx.id}')" class="px-3 py-1.5 bg-gray-100 text-gray-600 hover:text-ios-red rounded-xl text-xs font-semibold tap-scale">
+                                <button onclick="promptVoidTransaction('${tx.id}')" class="px-3 py-1.5 bg-cafe-bg text-cafe-muted hover:text-cafe-red rounded-full text-xs font-bold tap-scale border border-cafe-border">
                                     Void
                                 </button>
                             </div>
@@ -1625,59 +1751,44 @@
                     </div>
                 `;
             }).join('');
-
             lucide.createIcons();
         }
 
         function markUtangPaid(txId) {
             const tx = state.transactions.find(t => t.id === txId);
             if (!tx) return;
-
-            openConfirmModal(
-                'Mark Utang as Paid?',
-                `Confirm that ${tx.customerName} has paid ${formatPHP(tx.total)}? This will add to today's collected sales.`,
-                () => {
-                    tx.status = 'Paid';
-                    tx.paidAt = new Date().toISOString();
-                    saveTransactions();
-                    renderAll();
-                    showToast(`Utang from ${tx.customerName} marked Paid!`);
-                }
-            );
+            openConfirmModal('Mark Utang as Paid?', `Confirm ${tx.customerName} paid ${formatPHP(tx.total)}?`, () => {
+                tx.status = 'Paid';
+                tx.paidAt = new Date().toISOString();
+                saveTransactions();
+                renderAll();
+                showToast(`Utang from ${tx.customerName} paid!`);
+            });
         }
 
         function promptVoidTransaction(txId) {
             const tx = state.transactions.find(t => t.id === txId);
             if (!tx) return;
-
-            openConfirmModal(
-                'Void Transaction?',
-                `Void ${tx.id} (${formatPHP(tx.total)})? Item quantities will be automatically restored to inventory.`,
-                () => {
-                    tx.voided = true;
-                    // Restore inventory stock
-                    tx.items.forEach(item => {
-                        const prod = state.products.find(p => p.id === item.productId);
-                        if (prod) {
-                            prod.stock += item.qty;
-                        }
-                    });
-                    saveProducts();
-                    saveTransactions();
-                    renderAll();
-                    showToast('Transaction voided & stock restored', 'rotate-ccw', 'text-ios-orange');
-                }
-            );
+            openConfirmModal('Void Transaction?', `Void ${tx.id} (${formatPHP(tx.total)}) and restore stock?`, () => {
+                tx.voided = true;
+                tx.items.forEach(item => {
+                    const prod = state.products.find(p => p.id === item.productId);
+                    if (prod) prod.stock += item.qty;
+                });
+                saveProducts();
+                saveTransactions();
+                renderAll();
+                showToast('Voided & stock restored', 'rotate-ccw', 'text-amber-300');
+            });
         }
 
-        // ==================== TAB 4: REPORTS & BACKUP FUNCTIONS ====================
+        // ==================== TAB 4: REPORTS & BACKUP ====================
         function setReportPeriod(period) {
             state.reportPeriod = period;
             ['today', 'week', 'all'].forEach(p => {
-                const btn = document.getElementById(`rep-${p}`);
-                btn.className = p === period
-                    ? 'py-1.5 rounded-lg bg-white text-black shadow-sm transition-all'
-                    : 'py-1.5 rounded-lg text-gray-600 transition-all';
+                document.getElementById(`rep-${p}`).className = p === period
+                    ? 'py-1.5 rounded-full bg-cafe-espresso text-white shadow-xs transition-all'
+                    : 'py-1.5 rounded-full text-cafe-muted transition-all';
             });
             renderReportsTab();
         }
@@ -1691,17 +1802,14 @@
                 return true;
             });
 
-            let revenue = 0;
-            let cost = 0;
+            let revenue = 0, cost = 0;
             const itemSalesMap = {};
 
             validTxs.forEach(tx => {
                 revenue += tx.total;
                 cost += tx.totalCost;
                 tx.items.forEach(item => {
-                    if (!itemSalesMap[item.name]) {
-                        itemSalesMap[item.name] = { name: item.name, qty: 0, revenue: 0 };
-                    }
+                    if (!itemSalesMap[item.name]) itemSalesMap[item.name] = { name: item.name, qty: 0, revenue: 0 };
                     itemSalesMap[item.name].qty += item.qty;
                     itemSalesMap[item.name].revenue += item.price * item.qty;
                 });
@@ -1716,12 +1824,11 @@
             document.getElementById('rep-margin').textContent = `${margin}%`;
             document.getElementById('rep-orders').textContent = validTxs.length;
 
-            // Top Selling Items
             const topContainer = document.getElementById('rep-top-items');
             const sortedItems = Object.values(itemSalesMap).sort((a, b) => b.qty - a.qty).slice(0, 5);
 
             if (sortedItems.length === 0) {
-                topContainer.innerHTML = `<p class="text-xs text-ios-gray text-center py-4">No completed sales for this period yet.</p>`;
+                topContainer.innerHTML = `<p class="text-xs text-cafe-muted text-center py-4">No completed sales for this period yet.</p>`;
                 return;
             }
 
@@ -1731,73 +1838,51 @@
                 return `
                     <div class="space-y-1">
                         <div class="flex justify-between text-xs">
-                            <span class="font-bold text-gray-800 truncate pr-2">${idx + 1}. ${item.name}</span>
-                            <span class="text-ios-gray shrink-0"><strong class="text-black">${item.qty}</strong> sold (${formatPHPShort(item.revenue)})</span>
+                            <span class="font-bold text-cafe-text truncate pr-2">${idx + 1}. ${item.name}</span>
+                            <span class="text-cafe-muted shrink-0"><strong class="text-cafe-text">${item.qty}</strong> sold (${formatPHPShort(item.revenue)})</span>
                         </div>
-                        <div class="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                            <div class="bg-ios-blue h-full rounded-full" style="width: ${barWidth}%"></div>
+                        <div class="w-full bg-cafe-bg h-2 rounded-full overflow-hidden">
+                            <div class="bg-cafe-espresso h-full rounded-full" style="width: ${barWidth}%"></div>
                         </div>
                     </div>
                 `;
             }).join('');
         }
 
-        // JSON Export / Import Backup
         function exportDataJSON() {
-            const backupPayload = {
-                app: 'TindahanPOS',
-                exportedAt: new Date().toISOString(),
-                products: state.products,
-                categories: state.categories,
-                transactions: state.transactions
-            };
-
-            const dataStr = JSON.stringify(backupPayload, null, 2);
-            const blob = new Blob([dataStr], { type: 'application/json' });
+            const payload = { app: 'BrewAndBlissPOS', exportedAt: new Date().toISOString(), branding: state.branding, products: state.products, categories: state.categories, transactions: state.transactions };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
-
-            const dateTag = new Date().toISOString().split('T')[0];
             const link = document.createElement('a');
             link.href = url;
-            link.download = `TindahanPOS_Backup_${dateTag}.json`;
+            link.download = `BrewBlissPOS_Backup_${new Date().toISOString().split('T')[0]}.json`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
-
-            showToast('Backup JSON downloaded!');
+            showToast('JSON backup downloaded!');
         }
 
         function importDataJSON(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const parsed = JSON.parse(e.target.result);
-                    if (!Array.isArray(parsed.products) || !Array.isArray(parsed.transactions)) {
-                        throw new Error('Invalid TindahanPOS backup format');
-                    }
-
-                    openConfirmModal(
-                        'Restore Backup Data?',
-                        `This will replace your current inventory (${state.products.length} items) and sales with the backup file (${parsed.products.length} items).`,
-                        () => {
-                            state.products = parsed.products;
-                            state.categories = parsed.categories || [...DEFAULT_CATEGORIES];
-                            state.transactions = parsed.transactions;
-                            state.cart = [];
-
-                            saveProducts();
-                            saveCategories();
-                            saveTransactions();
-                            renderAll();
-                            showToast('Backup restored successfully!');
-                        }
-                    );
+                    if (!Array.isArray(parsed.products) || !Array.isArray(parsed.transactions)) throw new Error('Invalid format');
+                    openConfirmModal('Restore Backup?', `Replace current store data with ${parsed.products.length} products from backup?`, () => {
+                        state.products = parsed.products;
+                        state.categories = parsed.categories || [...DEFAULT_CATEGORIES];
+                        state.transactions = parsed.transactions;
+                        if (parsed.branding) { state.branding = parsed.branding; saveBranding(); applyBrandingUI(); }
+                        state.cart = [];
+                        saveProducts(); saveCategories(); saveTransactions();
+                        renderAll();
+                        showToast('Backup restored!');
+                    });
                 } catch (err) {
-                    showToast('Invalid JSON backup file', 'alert-circle', 'text-ios-red');
+                    showToast('Invalid JSON backup file', 'alert-circle', 'text-red-300');
                 }
                 event.target.value = '';
             };
@@ -1805,64 +1890,81 @@
         }
 
         function promptResetDemo() {
-            openConfirmModal(
-                'Reset Sample Data?',
-                'This will restore the default Philippine sari-sari store products and clear current history.',
-                () => {
-                    localStorage.removeItem(STORAGE_KEYS.PRODUCTS);
-                    localStorage.removeItem(STORAGE_KEYS.CATEGORIES);
-                    localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS);
-                    state.cart = [];
-                    loadDataFromStorage();
-                    renderAll();
-                    showToast('Sample data restored');
-                }
-            );
+            openConfirmModal('Reset Sample Data?', 'Restore default Sari-Sari store products and sample transactions?', () => {
+                Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
+                state.cart = [];
+                state.branding = { name: 'Sari-Sari', sub: 'STORE & POS' };
+                loadDataFromStorage();
+                applyBrandingUI();
+                renderAll();
+                showToast('Sample store restored');
+            });
         }
 
-        // ==================== CUSTOM CONFIRMATION & TOAST UI ====================
-        let confirmCallback = null;
+        // ==================== ALERTS DRAWER & CONFIRMATION ====================
+        function openAlertsDrawer() {
+            const lowItems = state.products.filter(p => p.stock <= p.threshold);
+            const unpaidUtang = state.transactions.filter(t => !t.voided && t.paymentMethod === 'Utang' && t.status === 'Unpaid');
+            const list = document.getElementById('alerts-list');
+
+            let html = '';
+            unpaidUtang.forEach(u => {
+                html += `
+                    <div onclick="closeAlertsDrawer(); switchTab('sales'); setSalesFilter('utang');" class="bg-white p-3 rounded-2xl border border-cafe-border flex items-center justify-between cursor-pointer tap-scale">
+                        <div>
+                            <span class="text-[10px] font-bold uppercase text-cafe-red">Unpaid Utang</span>
+                            <p class="text-xs font-bold text-cafe-text">${u.customerName}</p>
+                            <p class="text-[11px] text-cafe-muted">Due: ${u.dueDate || 'No date'}</p>
+                        </div>
+                        <span class="font-sans text-sm font-extrabold text-cafe-red tabular-nums">${formatPHP(u.total)}</span>
+                    </div>
+                `;
+            });
+            lowItems.forEach(p => {
+                html += `
+                    <div onclick="closeAlertsDrawer(); openProductModal('${p.id}');" class="bg-white p-3 rounded-2xl border border-cafe-border flex items-center justify-between cursor-pointer tap-scale">
+                        <div>
+                            <span class="text-[10px] font-bold uppercase text-cafe-orange">${p.stock === 0 ? 'Out of Stock' : 'Low Stock Alert'}</span>
+                            <p class="text-xs font-bold text-cafe-text">${p.name}</p>
+                            <p class="text-[11px] text-cafe-muted">Only ${p.stock} left in inventory</p>
+                        </div>
+                        <span class="px-2.5 py-1 bg-cafe-surface text-cafe-espresso rounded-full text-[11px] font-bold">Restock</span>
+                    </div>
+                `;
+            });
+
+            list.innerHTML = html || `<div class="bg-white p-8 rounded-2xl text-center border border-cafe-border"><p class="text-2xl mb-1">✨</p><p class="text-xs font-bold text-cafe-text">All stocks & accounts look great!</p></div>`;
+            document.getElementById('alerts-modal').classList.remove('hidden');
+        }
+
+        function closeAlertsDrawer() { document.getElementById('alerts-modal').classList.add('hidden'); }
 
         function openConfirmModal(title, desc, onConfirm) {
             document.getElementById('confirm-title').textContent = title;
             document.getElementById('confirm-desc').textContent = desc;
-            confirmCallback = onConfirm;
-            
-            const yesBtn = document.getElementById('confirm-yes-btn');
-            yesBtn.onclick = () => {
-                closeConfirmModal();
-                if (confirmCallback) confirmCallback();
-            };
-
+            document.getElementById('confirm-yes-btn').onclick = () => { closeConfirmModal(); if (onConfirm) onConfirm(); };
             document.getElementById('confirm-modal').classList.remove('hidden');
         }
-
-        function closeConfirmModal() {
-            document.getElementById('confirm-modal').classList.add('hidden');
-        }
+        function closeConfirmModal() { document.getElementById('confirm-modal').classList.add('hidden'); }
 
         let toastTimer = null;
-        function showToast(message, iconName = 'check-circle-2', iconColorClass = 'text-ios-green') {
+        function showToast(message, iconName = 'check-circle-2', iconColorClass = 'text-amber-300') {
             const toast = document.getElementById('toast');
-            const msgEl = document.getElementById('toast-message');
+            document.getElementById('toast-message').textContent = message;
             const iconEl = document.getElementById('toast-icon');
-
-            msgEl.textContent = message;
             iconEl.setAttribute('data-lucide', iconName);
             iconEl.className = `w-4 h-4 shrink-0 ${iconColorClass}`;
             lucide.createIcons();
 
             toast.classList.remove('opacity-0', '-translate-y-4');
             toast.classList.add('opacity-100', 'translate-y-0');
-
             clearTimeout(toastTimer);
             toastTimer = setTimeout(() => {
                 toast.classList.remove('opacity-100', 'translate-y-0');
                 toast.classList.add('opacity-0', '-translate-y-4');
-            }, 2600);
+            }, 2500);
         }
 
-        // Start App
         window.addEventListener('DOMContentLoaded', initApp);
     </script>
 </body>
