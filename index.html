@@ -2908,6 +2908,14 @@
                 ref
             });
 
+            // Kapag Cash-In, pumapasok ang pera sa GCash wallet (+amount).
+            // Kapag Cash-Out, lumalabas ang pera mula sa GCash wallet (-amount).
+            if (state.gcashEntryType === 'Cash-Out') {
+                state.gcash.puhunan = Math.max(0, Number(state.gcash.puhunan || 0) - amount);
+            } else {
+                state.gcash.puhunan = Math.max(0, Number(state.gcash.puhunan || 0) + amount);
+            }
+
             saveGCashLedger();
             document.getElementById('gcash-entry-amount').value = '';
             document.getElementById('gcash-entry-fee').value = '';
@@ -2918,6 +2926,15 @@
         }
 
         function deleteGCashEntry(entryId) {
+            const target = state.gcash.entries.find(e => e.id === entryId);
+            if (target) {
+                const amt = Number(target.amount || 0);
+                if (target.type === 'Cash-Out') {
+                    state.gcash.puhunan = Math.max(0, Number(state.gcash.puhunan || 0) + amt);
+                } else {
+                    state.gcash.puhunan = Math.max(0, Number(state.gcash.puhunan || 0) - amt);
+                }
+            }
             state.gcash.entries = state.gcash.entries.filter(e => e.id !== entryId);
             saveGCashLedger();
             renderGCashTab();
