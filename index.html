@@ -521,12 +521,50 @@
                     <h2 class="font-sans text-lg font-extrabold text-cafe-text">Sales & Profit Reports</h2>
                     <p class="text-[11px] text-cafe-muted">Revenue, cost, profit & top sellers</p>
                 </div>
-                <button type="button" onclick="closeReportsModal()" class="w-8 h-8 bg-cafe-bg rounded-full flex items-center justify-center text-cafe-text">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
+                <div class="flex items-center gap-1.5">
+                    <button type="button" onclick="exportReportCSV()" title="Export Report CSV" class="px-2.5 py-1.5 bg-cafe-surface hover:bg-cafe-latte/60 text-cafe-espresso rounded-full text-[11px] font-bold flex items-center gap-1 border border-cafe-border tap-scale">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                        <span>Export</span>
+                    </button>
+                    <label title="Import Backup JSON" class="px-2.5 py-1.5 bg-cafe-surface hover:bg-cafe-latte/60 text-cafe-espresso rounded-full text-[11px] font-bold flex items-center gap-1 border border-cafe-border tap-scale cursor-pointer">
+                        <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                        <span>Import</span>
+                        <input type="file" accept="application/json,.json" class="hidden" onchange="importDataJSON(event)">
+                    </label>
+                    <button type="button" onclick="closeReportsModal()" class="w-8 h-8 bg-cafe-bg rounded-full flex items-center justify-center text-cafe-text">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
             </div>
 
             <div class="p-4 overflow-y-auto space-y-4 flex-1">
+                <!-- Cloud Auto-Sync Panel -->
+                <div class="bg-white rounded-2xl p-3.5 border border-cafe-border shadow-cafe space-y-2.5">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-1.5">
+                            <i data-lucide="cloud" class="w-4 h-4 text-cafe-espresso"></i>
+                            <span class="text-xs font-bold text-cafe-text">Cloud Auto-Sync</span>
+                        </div>
+                        <label class="inline-flex items-center gap-1.5 text-[11px] font-bold text-cafe-text cursor-pointer">
+                            <input type="checkbox" id="auto-sync-toggle" onchange="toggleAutoSync(event)" class="accent-[#4A2C18] w-3.5 h-3.5 rounded">
+                            <span>Auto</span>
+                        </label>
+                    </div>
+
+                    <div class="flex gap-1.5">
+                        <input type="text" id="sync-key-input" placeholder="Sync key or SS1-... code"
+                            class="flex-1 bg-cafe-bg rounded-xl px-3 py-1.5 text-xs font-semibold text-cafe-text border border-cafe-border outline-none focus:border-cafe-espresso">
+                        <button type="button" onclick="pullFromCloud(true)" class="px-2.5 py-1.5 bg-cafe-espresso text-white rounded-xl text-[11px] font-bold tap-scale shrink-0">
+                            Sync Now
+                        </button>
+                        <button type="button" onclick="copySyncCode()" title="Copy Sync Code" class="px-2.5 py-1.5 bg-cafe-surface text-cafe-espresso rounded-xl text-[11px] font-bold border border-cafe-border tap-scale shrink-0">
+                            Copy
+                        </button>
+                    </div>
+
+                    <p id="sync-status-text" class="text-[11px] font-semibold text-cafe-muted">Local saved • Ready</p>
+                </div>
+
                 <div class="bg-cafe-surface p-1 rounded-full grid grid-cols-3 text-xs font-bold border border-cafe-border">
                     <button type="button" id="rep-today" onclick="setReportPeriod('today')" class="py-1.5 rounded-full bg-cafe-espresso text-white shadow-xs transition-all">
                         Today
@@ -2900,6 +2938,59 @@
                     </div>
                 `;
             }).join('');
+        }
+
+        function exportReportCSV() {
+            try {
+                const validTxs = state.transactions.filter(t => {
+                    if (t.voided || t.status !== 'Paid') return false;
+                    const refDate = t.paidAt || t.date;
+                    if (state.reportPeriod === 'today') return isToday(refDate);
+                    if (state.reportPeriod === 'week') return isWithinLast7Days(refDate);
+                    return true;
+                });
+
+                const rows = [
+                    ['Transaction ID', 'Date', 'Payment Method', 'Customer', 'Items', 'Cost (PHP)', 'Total (PHP)', 'Profit (PHP)']
+                ];
+
+                validTxs.forEach(tx => {
+                    const itemsText = Array.isArray(tx.items)
+                        ? tx.items.map(i => `${i.name} x${i.qty}`).join('; ')
+                        : '';
+                    const txCost = Number(tx.totalCost || 0);
+                    const txTotal = Number(tx.total || 0);
+                    const txProfit = txTotal - txCost;
+                    rows.push([
+                        tx.id || '',
+                        tx.paidAt || tx.date || '',
+                        tx.paymentMethod || '',
+                        tx.customerName || 'Walk-in',
+                        itemsText,
+                        txCost.toFixed(2),
+                        txTotal.toFixed(2),
+                        txProfit.toFixed(2)
+                    ]);
+                });
+
+                const csvContent = rows
+                    .map(r => r.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
+                    .join('\n');
+
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `SariSari_Report_${state.reportPeriod}_${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                showToast('Report exported as CSV!');
+            } catch (err) {
+                console.error('Export report CSV error:', err);
+                showToast('Failed to export report', 'alert-circle', 'text-red-300');
+            }
         }
 
         function exportDataJSON() {
