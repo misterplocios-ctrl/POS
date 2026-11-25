@@ -1854,7 +1854,7 @@
         }
 
         // ==================== TAB 1: POS HOME, HERO & VALUATION BANNER ====================
-        function getBestSellingProduct() {
+        function getSoldQtyMap() {
             const soldQtyByProduct = {};
             state.transactions.forEach(tx => {
                 if (tx.voided || tx.status !== 'Paid' || !Array.isArray(tx.items)) return;
@@ -1863,6 +1863,11 @@
                     soldQtyByProduct[key] = (soldQtyByProduct[key] || 0) + Number(item.qty || 0);
                 });
             });
+            return soldQtyByProduct;
+        }
+
+        function getBestSellingProduct() {
+            const soldQtyByProduct = getSoldQtyMap();
 
             let bestProd = null;
             let maxSold = 0;
@@ -2029,8 +2034,20 @@
                 return;
             }
 
+            // Sort products from most popular (highest sold qty) to least popular
+            const soldQtyMap = getSoldQtyMap();
+            const sortedProducts = [...filtered].sort((a, b) => {
+                const soldA = soldQtyMap[a.id] || soldQtyMap[a.name] || 0;
+                const soldB = soldQtyMap[b.id] || soldQtyMap[b.name] || 0;
+                if (soldB !== soldA) return soldB - soldA;
+                const stockA = Number(a.stock || 0);
+                const stockB = Number(b.stock || 0);
+                if ((stockB > 0) !== (stockA > 0)) return stockB > 0 ? 1 : -1;
+                return String(a.name || '').localeCompare(String(b.name || ''));
+            });
+
             emptyEl.classList.add('hidden');
-            grid.innerHTML = filtered.map(p => {
+            grid.innerHTML = sortedProducts.map(p => {
                 const stock = Math.max(0, Number(p.stock || 0));
                 const isOut = stock === 0;
                 const isLow = stock > 0 && stock <= Number(p.threshold || 5);
