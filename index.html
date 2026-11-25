@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Brew & Bliss POS - Store & Inventory</title>
-    
+    <title>Sari-Sari POS - Store & Inventory</title>
+
     <!-- iOS PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Brew & Bliss POS">
+    <meta name="apple-mobile-web-app-title" content="Sari-Sari POS">
     <meta name="theme-color" content="#FAF5F0">
-    
+
     <!-- Dynamic SVG App Icon for iOS Home Screen -->
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='40' fill='%234A2C18'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='88'>☕</text></svg>">
 
@@ -67,11 +67,21 @@
         :root {
             --sat: env(safe-area-inset-top, 0px);
             --sab: env(safe-area-inset-bottom, 0px);
+            --theme-primary: #4A2C18;
+            --theme-dark: #2A160B;
+            --theme-mid: #6E4226;
+            --theme-accent: #8B5A2B;
+            --theme-bg: #FAF5F0;
+            --theme-surface: #F4ECE4;
+            --theme-border: #EFE5DC;
+            --theme-text: #23140B;
+            --theme-muted: #7A6455;
+            --theme-blur: rgba(250, 245, 240, 0.92);
         }
 
         body {
-            background-color: #FAF5F0;
-            color: #23140B;
+            background-color: var(--theme-bg) !important;
+            color: var(--theme-text) !important;
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             font-size: 16px;
             line-height: 1.5;
@@ -80,6 +90,7 @@
             overscroll-behavior-y: none;
             padding-top: var(--sat);
             padding-bottom: calc(96px + var(--sab));
+            transition: background-color 0.35s ease, color 0.35s ease;
         }
 
         h1, h2, h3, .font-serif {
@@ -109,7 +120,7 @@
         }
 
         .cafe-blur {
-            background: rgba(250, 245, 240, 0.92);
+            background: var(--theme-blur) !important;
             backdrop-filter: saturate(180%) blur(18px);
             -webkit-backdrop-filter: saturate(180%) blur(18px);
         }
@@ -129,28 +140,18 @@
             animation: slideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
-        /* Adaptive Theme Variables driven by Top Hero Image */
-        :root {
-            --theme-primary: #4A2C18;
-            --theme-dark: #2A160B;
-            --theme-mid: #6E4226;
-            --theme-accent: #8B5A2B;
-            --theme-bg: #FAF5F0;
-            --theme-surface: #F4ECE4;
-            --theme-border: #EFE5DC;
-            --theme-text: #23140B;
-            --theme-muted: #7A6455;
-            --theme-blur: rgba(250, 245, 240, 0.92);
+        /* Floating Active Bottom Nav Button */
+        .nav-btn {
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease, box-shadow 0.25s ease, color 0.2s ease;
+            border-radius: 9999px;
         }
-
-        body {
-            background-color: var(--theme-bg) !important;
-            color: var(--theme-text) !important;
-            transition: background-color 0.35s ease, color 0.35s ease;
-        }
-
-        .cafe-blur {
-            background: var(--theme-blur) !important;
+        .nav-btn.is-floating {
+            transform: translateY(-10px);
+            background-color: var(--theme-primary);
+            color: #FFFFFF !important;
+            box-shadow: 0 10px 22px rgba(35, 20, 11, 0.25);
+            padding-top: 0.45rem;
+            padding-bottom: 0.45rem;
         }
 
         .bg-cafe-bg { background-color: var(--theme-bg) !important; }
@@ -177,12 +178,10 @@
     <!-- ==================== TOP CENTERED BRAND HEADER ==================== -->
     <header class="sticky top-0 z-30 cafe-blur px-4 safe-top pb-2.5 border-b border-cafe-border/60">
         <div class="max-w-xl mx-auto flex items-center justify-between pt-1">
-            <!-- Left Menu Button (Quick Backup & Store Settings) -->
-            <button onclick="switchTab('store')" aria-label="Store Menu" class="w-10 h-10 rounded-full flex items-center justify-center text-cafe-text hover:bg-cafe-surface tap-scale">
+            <button type="button" onclick="openReportsModal()" aria-label="Store Reports" class="w-10 h-10 rounded-full flex items-center justify-center text-cafe-text hover:bg-cafe-surface tap-scale">
                 <i data-lucide="align-left" class="w-5 h-5"></i>
             </button>
 
-            <!-- Center Brand Title (Matching Brew & Bliss Reference) -->
             <div onclick="switchTab('pos')" class="text-center cursor-pointer">
                 <div class="flex justify-center mb-0.5 text-cafe-espresso">
                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -197,13 +196,12 @@
                 <p id="brand-sub-display" class="text-[11px] font-bold tracking-[0.18em] text-cafe-muted uppercase mt-1">— STORE & POS —</p>
             </div>
 
-            <!-- Right Alerts & Cart Icons -->
             <div class="flex items-center gap-1">
-                <button onclick="openAlertsDrawer()" aria-label="Notifications" class="relative w-10 h-10 rounded-full flex items-center justify-center text-cafe-text hover:bg-cafe-surface tap-scale">
+                <button type="button" onclick="openAlertsDrawer()" aria-label="Notifications" class="relative w-10 h-10 rounded-full flex items-center justify-center text-cafe-text hover:bg-cafe-surface tap-scale">
                     <i data-lucide="bell" class="w-5 h-5"></i>
                     <span id="header-alert-badge" class="hidden absolute top-1.5 right-1.5 bg-cafe-espresso text-white text-[9px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center">0</span>
                 </button>
-                <button onclick="openCartModal()" aria-label="Checkout Cart" class="relative w-10 h-10 rounded-full flex items-center justify-center text-cafe-text hover:bg-cafe-surface tap-scale">
+                <button type="button" onclick="openCartModal()" aria-label="Checkout Cart" class="relative w-10 h-10 rounded-full flex items-center justify-center text-cafe-text hover:bg-cafe-surface tap-scale">
                     <i data-lucide="shopping-cart" class="w-5 h-5"></i>
                     <span id="header-cart-badge" class="hidden absolute top-1.5 right-1.5 bg-cafe-espresso text-white text-[9px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center">0</span>
                 </button>
@@ -222,16 +220,14 @@
     <!-- Main Container -->
     <main class="max-w-xl mx-auto px-4 pt-3 pb-6">
 
-        <!-- ==================== TAB 1: POS HOME (MATCHING REFERENCE MOCKUP) ==================== -->
+        <!-- ==================== TAB 1: POS HOME ==================== -->
         <section id="tab-pos" class="space-y-4">
-            
-            <!-- Pill Search Bar + Circular Filter Button -->
             <div class="flex items-center gap-2.5">
                 <div class="relative flex-1">
                     <i data-lucide="search" class="w-4 h-4 text-cafe-muted absolute left-4 top-1/2 -translate-y-1/2"></i>
-                    <input type="text" id="pos-search" placeholder="Search coffee, snacks, goods & more..." 
+                    <input type="text" id="pos-search" placeholder="Search coffee, snacks, goods & more..."
                         class="w-full bg-white text-[15px] text-cafe-text placeholder:text-cafe-muted/70 rounded-full pl-10 pr-16 py-2.5 outline-none border border-cafe-border shadow-cafe focus:border-cafe-espresso transition-all">
-                    <button id="pos-search-clear" class="hidden absolute right-9 top-1/2 -translate-y-1/2 text-cafe-muted p-1">
+                    <button type="button" id="pos-search-clear" class="hidden absolute right-9 top-1/2 -translate-y-1/2 text-cafe-muted p-1">
                         <i data-lucide="x" class="w-3.5 h-3.5"></i>
                     </button>
                     <button type="button" onclick="openBarcodeScanner('pos')" title="Scan Barcode" aria-label="Scan Barcode"
@@ -239,34 +235,30 @@
                         <i data-lucide="scan-barcode" class="w-4 h-4"></i>
                     </button>
                 </div>
-                <button id="pos-stock-filter-btn" onclick="cyclePOSStockFilter()" title="Filter stock status"
+                <button type="button" id="pos-stock-filter-btn" onclick="cyclePOSStockFilter()" title="Filter stock status"
                     class="w-10 h-10 rounded-full bg-white border border-cafe-border shadow-cafe flex items-center justify-center text-cafe-text tap-scale shrink-0 relative">
                     <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
                     <span id="pos-filter-dot" class="hidden absolute top-0 right-0 w-2.5 h-2.5 rounded-full bg-cafe-caramel border-2 border-white"></span>
                 </button>
             </div>
 
-            <!-- Dark Espresso Hero Banner Card (Matching "Good Coffee / Good Vibes") -->
+            <!-- Hero Banner Card -->
             <div id="hero-banner-card" class="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#231208] via-[#3A1F10] to-[#59331B] text-white p-5 shadow-cafe-lg transition-all duration-300">
-                <!-- Dynamic Best-Selling Product Image Showcase on Right -->
-                <div id="hero-bestseller-visual" class="absolute right-3 top-3 bottom-3 w-32 sm:w-36 rounded-2xl overflow-hidden border border-amber-200/25 bg-[#2A160B]/85 shadow-cafe-lg flex items-center justify-center pointer-events-none">
+                <div id="hero-bestseller-visual" class="absolute inset-0 w-full h-full overflow-hidden flex items-center justify-center pointer-events-none">
                     <img id="hero-bestseller-img" src="" alt="Top Selling Product" class="w-full h-full object-contain block hidden">
-                    <span id="hero-bestseller-emoji" class="text-5xl">☕</span>
-                    <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent p-2 text-left">
-                        <p id="hero-bestseller-tag" class="text-[9px] font-extrabold uppercase tracking-wider text-amber-300">MABENTA NGAYON</p>
-                        <p id="hero-bestseller-name" class="text-[11px] font-bold text-white leading-tight truncate">Nescafe Twin Pack</p>
-                    </div>
+                    <span id="hero-bestseller-emoji" class="text-6xl opacity-35">☕</span>
+                    <div class="absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-black/20"></div>
                 </div>
 
-                <div class="relative z-10 max-w-[60%] sm:max-w-[63%]">
-                    <p id="hero-kicker" class="font-sans font-semibold text-amber-200 text-[13px] tracking-wide uppercase">Today's Store Pulse</p>
-                    <h2 id="hero-headline" class="font-sans text-[27px] font-extrabold leading-[1.15] tracking-tight mt-0.5 uppercase">BEST SELLER<br>PRODUCT</h2>
-                    <p id="hero-subtext" class="text-xs text-amber-100/90 mt-1.5 leading-relaxed tabular-nums">
-                        Collected today: <strong id="hero-today-sales" class="text-white font-bold">₱0.00</strong> • Kita: <strong id="hero-today-kita" class="text-amber-300 font-bold">₱0.00</strong>
+                <div class="relative z-10 max-w-[78%]">
+                    <p id="hero-kicker" class="font-sans font-semibold text-amber-200 text-[12px] tracking-wide uppercase">Today's Store Pulse</p>
+                    <h2 id="hero-headline" class="font-sans text-[25px] font-extrabold leading-[1.15] tracking-tight mt-0.5 uppercase">BEST SELLER PRODUCT</h2>
+                    <p id="hero-bestseller-name" class="text-sm font-bold text-amber-300 mt-1 truncate">No sales yet</p>
+                    <p id="hero-subtext" class="text-xs text-amber-100/90 mt-1 leading-relaxed tabular-nums">
+                        Collected today: <strong id="hero-today-sales" class="text-white font-bold">₱0.00</strong> • Profit: <strong id="hero-today-kita" class="text-amber-300 font-bold">₱0.00</strong>
                     </p>
                 </div>
 
-                <!-- Decorative Carousel Dots -->
                 <div class="relative z-10 flex justify-center gap-1.5 mt-3">
                     <span class="w-4 h-1.5 rounded-full bg-white"></span>
                     <span class="w-1.5 h-1.5 rounded-full bg-white/35"></span>
@@ -274,39 +266,39 @@
                 </div>
             </div>
 
-            <!-- Circular Category Icons Row (Matching Coffee / Pastries / Sandwiches row) -->
-            <div id="pos-categories" class="flex gap-3.5 overflow-x-auto no-scrollbar py-1">
-                <!-- Rendered via JS -->
-            </div>
+            <!-- Circular Category Icons Row -->
+            <div id="pos-categories" class="flex gap-3.5 overflow-x-auto no-scrollbar py-1"></div>
 
-            <!-- Section Header: Popular Picks / All Items -->
+            <!-- Section Header -->
             <div class="flex items-center justify-between pt-0.5">
                 <h3 id="pos-section-title" class="text-[17px] font-bold text-cafe-text">Popular Picks</h3>
-                <button onclick="switchTab('inventory')" class="text-xs font-semibold text-cafe-muted hover:text-cafe-espresso flex items-center gap-1 tap-scale">
+                <button type="button" onclick="switchTab('inventory')" class="text-xs font-semibold text-cafe-muted hover:text-cafe-espresso flex items-center gap-1 tap-scale">
                     <span>Manage Stock</span>
                     <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
                 </button>
             </div>
 
-            <!-- Product Cards Grid (Matching Reference Card Anatomy) -->
-            <div id="pos-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <!-- Rendered via JS -->
+            <!-- Product Cards Grid -->
+            <div id="pos-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+
+            <!-- Empty Search / Store State -->
+            <div id="pos-empty" class="hidden bg-white rounded-2xl p-8 text-center border border-cafe-border space-y-2.5">
+                <p class="text-3xl">📦</p>
+                <p id="pos-empty-title" class="text-sm font-bold text-cafe-text">No products yet</p>
+                <p id="pos-empty-sub" class="text-xs text-cafe-muted">Add your products in Stock or scan a barcode to start selling.</p>
+                <button type="button" onclick="openProductModal()" class="mt-1 px-4 py-2 bg-cafe-espresso text-white rounded-full text-xs font-bold tap-scale inline-flex items-center gap-1.5">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                    <span>Add Item</span>
+                </button>
             </div>
 
-            <!-- Empty Search State -->
-            <div id="pos-empty" class="hidden bg-white rounded-2xl p-8 text-center border border-cafe-border">
-                <p class="text-3xl mb-2">☕</p>
-                <p class="text-sm font-bold text-cafe-text">No products match your filter</p>
-                <p class="text-xs text-cafe-muted mt-1">Clear your search or add a new item to your store.</p>
-            </div>
-
-            <!-- Bottom Promo / Inventory Valuation Summary Card (Matching "WEEKEND SPECIAL / 20% OFF" Banner) -->
+            <!-- Inventory Valuation Summary Card -->
             <div id="valuation-banner-card" onclick="switchTab('inventory')" class="relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#EFE3D6] via-[#E8D7C5] to-[#DFC8B2] border border-cafe-border p-4 flex items-center justify-between gap-3 cursor-pointer tap-scale shadow-cafe transition-all duration-300">
                 <div class="z-10">
                     <p class="text-[11px] font-bold tracking-wider uppercase text-cafe-caramel">INVENTORY VALUATION</p>
                     <p id="banner-inv-retail" class="font-sans text-2xl font-extrabold text-cafe-text leading-tight mt-0.5 tabular-nums">₱0.00</p>
                     <p class="text-xs text-cafe-muted mt-0.5 tabular-nums">
-                        Original Puhunan: <strong id="banner-inv-cost" class="text-cafe-text font-bold">₱0.00</strong>
+                        Original Capital: <strong id="banner-inv-cost" class="text-cafe-text font-bold">₱0.00</strong>
                     </p>
                     <div class="mt-2.5 inline-flex items-center gap-2 bg-cafe-espresso text-white text-[11px] font-bold tracking-wider uppercase pl-3 pr-1.5 py-1 rounded-full">
                         <span>VIEW INVENTORY</span>
@@ -316,45 +308,40 @@
                     </div>
                 </div>
 
-                <!-- Circular Profit Badge on Right (Matching "20% OFF" Circle) -->
                 <div id="valuation-profit-badge" class="w-20 h-20 rounded-full bg-cafe-espresso text-white flex flex-col items-center justify-center text-center p-2 shrink-0 shadow-md border-2 border-white/40 tabular-nums transition-colors duration-300">
-                    <span class="text-[10px] uppercase tracking-wider text-amber-200 font-semibold">Est. Kita</span>
+                    <span class="text-[10px] uppercase tracking-wider text-amber-200 font-semibold">Est. Profit</span>
                     <span id="banner-inv-profit" class="text-xs font-extrabold leading-tight mt-0.5">+₱0</span>
                 </div>
             </div>
-
         </section>
 
-        <!-- ==================== TAB 2: INVENTORY (ORIGINAL PUHUNAN VS INVENTORY PRICE) ==================== -->
+        <!-- ==================== TAB 2: INVENTORY ==================== -->
         <section id="tab-inventory" class="hidden space-y-3.5">
-            
-            <!-- Header Row -->
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="font-sans text-xl font-extrabold text-cafe-text">Store Inventory</h2>
-                    <p class="text-xs text-cafe-muted">Track puhunan, retail value & stock levels</p>
+                    <p class="text-xs text-cafe-muted">Track capital, retail value & stock levels</p>
                 </div>
-                <button onclick="openProductModal()" class="px-3.5 py-2 bg-cafe-espresso text-white rounded-full text-xs font-bold flex items-center gap-1.5 tap-scale shadow-cafe">
+                <button type="button" onclick="openProductModal()" class="px-3.5 py-2 bg-cafe-espresso text-white rounded-full text-xs font-bold flex items-center gap-1.5 tap-scale shadow-cafe">
                     <i data-lucide="plus" class="w-4 h-4"></i>
                     <span>Add Item</span>
                 </button>
             </div>
 
-            <!-- Prominent Original Price vs. Inventory Price Comparison Card -->
             <div class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe space-y-3">
                 <div class="flex items-center justify-between border-b border-cafe-border/70 pb-2">
                     <span class="text-[11px] font-bold uppercase tracking-wider text-cafe-caramel">Total Stock Valuation</span>
-                    <span id="inv-stat-est-profit" class="text-xs font-bold text-cafe-green bg-green-50 px-2.5 py-0.5 rounded-full">Est. Kita: +₱0.00</span>
+                    <span id="inv-stat-est-profit" class="text-xs font-bold text-cafe-green bg-green-50 px-2.5 py-0.5 rounded-full">Est. Profit: +₱0.00</span>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
                     <div class="bg-cafe-bg p-3 rounded-xl border border-cafe-border/60">
-                        <p class="text-[11px] font-semibold text-cafe-muted">Original Price (Puhunan)</p>
+                        <p class="text-[11px] font-semibold text-cafe-muted">Original Price (Capital)</p>
                         <p id="inv-stat-cost-value" class="font-sans text-lg font-extrabold text-cafe-text mt-0.5 tabular-nums">₱0.00</p>
                         <p class="text-[10px] text-cafe-muted mt-0.5">Total capital in stock</p>
                     </div>
                     <div class="bg-cafe-bg p-3 rounded-xl border border-cafe-border/60">
-                        <p class="text-[11px] font-semibold text-cafe-muted">Inventory Price (Benta)</p>
+                        <p class="text-[11px] font-semibold text-cafe-muted">Inventory Price (Retail)</p>
                         <p id="inv-stat-retail-value" class="font-sans text-lg font-extrabold text-cafe-espresso mt-0.5 tabular-nums">₱0.00</p>
                         <p class="text-[10px] text-cafe-muted mt-0.5">Total selling value</p>
                     </div>
@@ -372,24 +359,20 @@
                 </div>
             </div>
 
-            <!-- Search & Low Stock Filter -->
             <div class="flex gap-2">
                 <div class="relative flex-1">
                     <i data-lucide="search" class="w-4 h-4 text-cafe-muted absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-                    <input type="text" id="inv-search" placeholder="Search inventory..." 
+                    <input type="text" id="inv-search" placeholder="Search inventory..."
                         class="w-full bg-white text-sm rounded-full pl-10 pr-4 py-2 outline-none border border-cafe-border shadow-cafe focus:border-cafe-espresso">
                 </div>
-                <button id="inv-low-filter" onclick="toggleLowStockFilter()" 
+                <button type="button" id="inv-low-filter" onclick="toggleLowStockFilter()"
                     class="px-3.5 py-2 rounded-full text-xs font-semibold bg-white text-cafe-text border border-cafe-border shadow-cafe flex items-center gap-1.5 tap-scale shrink-0">
                     <span class="w-2 h-2 rounded-full bg-cafe-orange"></span>
                     <span>Low Stock</span>
                 </button>
             </div>
 
-            <!-- Inventory Item Cards -->
-            <div id="inv-list" class="space-y-2.5">
-                <!-- Rendered via JS -->
-            </div>
+            <div id="inv-list" class="space-y-2.5"></div>
         </section>
 
         <!-- ==================== TAB 3: UTANG & SALES LEDGER ==================== -->
@@ -399,7 +382,6 @@
                 <p class="text-xs text-cafe-muted">Daily collections & suki credit list</p>
             </div>
 
-            <!-- Summary Cards -->
             <div class="grid grid-cols-2 gap-3">
                 <div class="bg-white p-3.5 rounded-2xl border border-cafe-border shadow-cafe">
                     <div class="flex items-center justify-between mb-1">
@@ -424,201 +406,196 @@
                 </div>
             </div>
 
-            <!-- Warm Pill Segmented Control -->
             <div class="bg-cafe-surface p-1 rounded-full grid grid-cols-2 text-xs font-bold border border-cafe-border">
-                <button id="seg-all" onclick="setSalesFilter('all')" class="py-2 rounded-full bg-cafe-espresso text-white shadow-xs transition-all">
+                <button type="button" id="seg-all" onclick="setSalesFilter('all')" class="py-2 rounded-full bg-cafe-espresso text-white shadow-xs transition-all">
                     All Transactions
                 </button>
-                <button id="seg-utang" onclick="setSalesFilter('utang')" class="py-2 rounded-full text-cafe-muted transition-all">
+                <button type="button" id="seg-utang" onclick="setSalesFilter('utang')" class="py-2 rounded-full text-cafe-muted transition-all">
                     Utang List (Lista)
                 </button>
             </div>
 
-            <!-- Transactions List -->
-            <div id="transactions-list" class="space-y-2.5">
-                <!-- Rendered via JS -->
-            </div>
+            <div id="transactions-list" class="space-y-2.5"></div>
         </section>
 
-        <!-- ==================== TAB 4: STORE PROFILE, REPORTS & BACKUP ==================== -->
+        <!-- ==================== TAB 4: GCASH DAILY LEDGER ==================== -->
         <section id="tab-store" class="hidden space-y-4">
-            <div>
-                <h2 class="font-sans text-xl font-extrabold text-cafe-text">Store & Profit Reports</h2>
-                <p class="text-xs text-cafe-muted">Customize shop name, check kita & backup data</p>
-            </div>
-
-            <!-- Store Name Customizer -->
-            <div class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe space-y-3">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-cafe-caramel flex items-center gap-1.5">
-                    <i data-lucide="store" class="w-4 h-4"></i>
-                    <span>Store Branding</span>
-                </h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <div>
-                        <label class="text-[11px] font-semibold text-cafe-muted block mb-1">Store / Shop Name</label>
-                        <input type="text" id="setting-store-name" placeholder="Sari-Sari" 
-                            class="w-full bg-cafe-bg rounded-xl px-3 py-2 text-sm font-semibold border border-cafe-border outline-none focus:border-cafe-espresso">
-                    </div>
-                    <div>
-                        <label class="text-[11px] font-semibold text-cafe-muted block mb-1">Tagline / Subtitle</label>
-                        <input type="text" id="setting-store-sub" placeholder="STORE & POS" 
-                            class="w-full bg-cafe-bg rounded-xl px-3 py-2 text-sm font-semibold border border-cafe-border outline-none focus:border-cafe-espresso">
-                    </div>
-                </div>
-                <button onclick="saveStoreBranding()" class="w-full py-2.5 bg-cafe-espresso text-white rounded-xl text-xs font-bold tap-scale">
-                    Update Store Name
-                </button>
-            </div>
-
-            <!-- Automatic Cloud Sync Across Phones -->
-            <div class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe space-y-3">
-                <div class="flex items-center justify-between gap-2">
-                    <div>
-                        <h3 class="text-sm font-bold text-cafe-text flex items-center gap-1.5">
-                            <i data-lucide="refresh-cw" class="w-4 h-4 text-cafe-caramel"></i>
-                            <span>Auto Cloud Sync</span>
-                        </h3>
-                        <p class="text-xs text-cafe-muted mt-0.5">Use the same Sync Key on another phone to auto-load data.</p>
-                    </div>
-                    <label class="inline-flex items-center gap-2 cursor-pointer shrink-0">
-                        <input type="checkbox" id="auto-sync-toggle" onchange="toggleAutoSync(event)" class="w-4 h-4 accent-[#4A2C18]">
-                        <span class="text-xs font-bold text-cafe-text">Auto</span>
-                    </label>
-                </div>
-
-                <div class="flex items-center gap-2">
-                    <input type="text" id="sync-key-input" placeholder="Enter Sync Key"
-                        class="flex-1 bg-cafe-bg rounded-xl px-3 py-2 text-xs font-bold text-cafe-text border border-cafe-border outline-none focus:border-cafe-espresso">
-                    <button type="button" onclick="copySyncKey()" class="px-3 py-2 bg-cafe-surface text-cafe-espresso rounded-xl text-xs font-bold border border-cafe-border tap-scale shrink-0">
-                        Copy
-                    </button>
-                    <button type="button" onclick="generateNewSyncKey()" class="px-3 py-2 bg-cafe-surface text-cafe-espresso rounded-xl text-xs font-bold border border-cafe-border tap-scale shrink-0">
-                        New Key
-                    </button>
-                </div>
-
-                <div class="flex items-center justify-between pt-0.5">
-                    <span id="sync-status-text" class="text-[11px] font-semibold text-cafe-muted">Ready</span>
-                    <button type="button" onclick="pullFromCloud(true)" class="px-3 py-1.5 bg-cafe-espresso text-white rounded-xl text-xs font-bold flex items-center gap-1.5 tap-scale">
-                        <i data-lucide="cloud-download" class="w-3.5 h-3.5"></i>
-                        <span>Sync Now</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Period Filter -->
-            <div class="bg-cafe-surface p-1 rounded-full grid grid-cols-3 text-xs font-bold border border-cafe-border">
-                <button id="rep-today" onclick="setReportPeriod('today')" class="py-1.5 rounded-full bg-cafe-espresso text-white shadow-xs transition-all">Today</button>
-                <button id="rep-week" onclick="setReportPeriod('week')" class="py-1.5 rounded-full text-cafe-muted transition-all">Last 7 Days</button>
-                <button id="rep-all" onclick="setReportPeriod('all')" class="py-1.5 rounded-full text-cafe-muted transition-all">All Time</button>
-            </div>
-
-            <!-- Financial Metrics -->
-            <div class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe space-y-4">
-                <div class="flex items-center justify-between border-b border-cafe-border/60 pb-3">
-                    <div>
-                        <p class="text-xs font-semibold text-cafe-muted">Gross Revenue (Paid)</p>
-                        <p id="rep-revenue" class="font-sans text-2xl font-extrabold text-cafe-text mt-0.5 tabular-nums">₱0.00</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-xs font-semibold text-cafe-muted">Net Profit (Kita)</p>
-                        <p id="rep-profit" class="font-sans text-2xl font-extrabold text-cafe-green mt-0.5 tabular-nums">₱0.00</p>
-                    </div>
-                </div>
-                <div class="grid grid-cols-3 gap-2 text-center">
-                    <div class="bg-cafe-bg p-2 rounded-xl">
-                        <p class="text-[10px] text-cafe-muted">Puhunan Cost</p>
-                        <p id="rep-cost" class="text-xs font-bold text-cafe-text mt-0.5">₱0.00</p>
-                    </div>
-                    <div class="bg-cafe-bg p-2 rounded-xl">
-                        <p class="text-[10px] text-cafe-muted">Profit Margin</p>
-                        <p id="rep-margin" class="text-xs font-bold text-cafe-caramel mt-0.5">0%</p>
-                    </div>
-                    <div class="bg-cafe-bg p-2 rounded-xl">
-                        <p class="text-[10px] text-cafe-muted">Completed Orders</p>
-                        <p id="rep-orders" class="text-xs font-bold text-cafe-text mt-0.5">0</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Top Selling Items -->
-            <div class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe">
-                <h3 class="text-sm font-bold text-cafe-text mb-3 flex items-center gap-1.5">
-                    <i data-lucide="trending-up" class="w-4 h-4 text-cafe-caramel"></i>
-                    <span>Top-Selling Items</span>
-                </h3>
-                <div id="rep-top-items" class="space-y-3">
-                    <!-- Rendered via JS -->
-                </div>
-            </div>
-
-            <!-- JSON Data Backup & Restore -->
-            <div class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe space-y-3">
+            <div class="flex items-center justify-between">
                 <div>
-                    <h3 class="text-sm font-bold text-cafe-text flex items-center gap-1.5">
-                        <i data-lucide="database" class="w-4 h-4 text-cafe-caramel"></i>
-                        <span>JSON Data Backup & Restore</span>
-                    </h3>
-                    <p class="text-xs text-cafe-muted mt-1">Export a backup file or restore from a previous JSON save.</p>
+                    <h2 class="font-sans text-xl font-extrabold text-cafe-text">GCash Daily Ledger</h2>
+                    <p class="text-xs text-cafe-muted">Separate GCash puhunan & daily transactions</p>
+                </div>
+                <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold border border-blue-200/70">
+                    GCash Only
+                </span>
+            </div>
+
+            <!-- GCash Puhunan & Daily Summary -->
+            <div class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe space-y-3">
+                <div class="flex items-center justify-between border-b border-cafe-border/70 pb-2">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-blue-700">GCash Capital (Wallet Balance)</span>
+                    <span id="gcash-today-fee" class="text-xs font-bold text-cafe-green bg-green-50 px-2.5 py-0.5 rounded-full tabular-nums">Today Fee: +₱0.00</span>
+                </div>
+
+                <div class="flex gap-2">
+                    <div class="relative flex-1">
+                        <span class="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-cafe-muted">₱</span>
+                        <input type="number" id="gcash-puhunan-input" step="0.01" min="0" placeholder="0.00"
+                            class="w-full bg-cafe-bg rounded-xl pl-8 pr-3 py-2 text-sm font-extrabold text-cafe-text border border-cafe-border outline-none focus:border-cafe-espresso tabular-nums">
+                    </div>
+                    <button type="button" onclick="saveGCashPuhunan()" class="px-4 py-2 bg-cafe-espresso text-white rounded-xl text-xs font-bold tap-scale shrink-0">
+                        Save Capital
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2.5 pt-1">
+                    <div class="bg-cafe-bg p-3 rounded-xl border border-cafe-border/60">
+                        <p class="text-[11px] font-semibold text-cafe-muted">Today Cash-In</p>
+                        <p id="gcash-today-cashin" class="font-sans text-base font-extrabold text-cafe-text mt-0.5 tabular-nums">₱0.00</p>
+                    </div>
+                    <div class="bg-cafe-bg p-3 rounded-xl border border-cafe-border/60">
+                        <p class="text-[11px] font-semibold text-cafe-muted">Today Cash-Out</p>
+                        <p id="gcash-today-cashout" class="font-sans text-base font-extrabold text-cafe-text mt-0.5 tabular-nums">₱0.00</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Daily GCash Transaction Form -->
+            <form onsubmit="event.preventDefault(); addGCashEntry();" class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe space-y-3">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-cafe-caramel">New Daily GCash Entry</h3>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" id="gcash-type-Cash-In" onclick="selectGCashEntryType('Cash-In')" class="gcash-type-btn py-2 px-3 rounded-xl border-2 border-cafe-espresso bg-cafe-espresso text-white text-xs font-bold">
+                        Cash-In
+                    </button>
+                    <button type="button" id="gcash-type-Cash-Out" onclick="selectGCashEntryType('Cash-Out')" class="gcash-type-btn py-2 px-3 rounded-xl border-2 border-transparent bg-cafe-bg text-cafe-text text-xs font-bold">
+                        Cash-Out
+                    </button>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2.5">
-                    <button type="button" onclick="exportDataJSON()" class="py-2.5 px-3 bg-cafe-espresso text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 tap-scale">
-                        <i data-lucide="download" class="w-4 h-4"></i>
-                        <span>Export JSON</span>
-                    </button>
-                    <label class="py-2.5 px-3 bg-cafe-surface text-cafe-espresso rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 tap-scale cursor-pointer border border-cafe-border">
-                        <i data-lucide="upload" class="w-4 h-4"></i>
-                        <span>Import JSON</span>
-                        <input type="file" id="import-json-input" accept=".json,application/json" class="hidden" onchange="importDataJSON(event)">
-                    </label>
+                    <div>
+                        <label class="text-[11px] font-semibold text-cafe-muted block mb-1">Amount (₱) *</label>
+                        <input type="number" id="gcash-entry-amount" step="0.01" min="0.01" required placeholder="0.00"
+                            class="w-full bg-cafe-bg rounded-xl px-3 py-2 text-sm font-bold border border-cafe-border outline-none focus:border-cafe-espresso tabular-nums">
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-semibold text-cafe-muted block mb-1">Service Fee / Profit (₱)</label>
+                        <input type="number" id="gcash-entry-fee" step="0.01" min="0" placeholder="0.00"
+                            class="w-full bg-cafe-bg rounded-xl px-3 py-2 text-sm font-bold border border-cafe-border outline-none focus:border-cafe-espresso tabular-nums">
+                    </div>
                 </div>
 
-                <button type="button" onclick="promptResetDemo()" class="w-full py-2 text-xs font-semibold text-cafe-red hover:bg-red-50/60 rounded-xl transition-colors">
-                    Reset to Sample Sari-Sari Data
-                </button>
-            </div>
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="text-[11px] font-semibold text-cafe-muted block mb-1">Customer / Mobile</label>
+                        <input type="text" id="gcash-entry-customer" placeholder="e.g., 0917..."
+                            class="w-full bg-cafe-bg rounded-xl px-3 py-2 text-xs font-semibold border border-cafe-border outline-none focus:border-cafe-espresso">
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-semibold text-cafe-muted block mb-1">Ref No. / Note</label>
+                        <input type="text" id="gcash-entry-ref" placeholder="Optional"
+                            class="w-full bg-cafe-bg rounded-xl px-3 py-2 text-xs font-semibold border border-cafe-border outline-none focus:border-cafe-espresso">
+                    </div>
+                </div>
 
+                <button type="submit" class="w-full py-2.5 bg-cafe-espresso text-white rounded-xl text-xs font-bold tap-scale">
+                    Record GCash Transaction
+                </button>
+            </form>
+
+            <!-- Daily GCash Entries List -->
+            <div class="space-y-2">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-cafe-muted px-1">Daily GCash Transactions</h3>
+                <div id="gcash-entries-list" class="space-y-2.5"></div>
+            </div>
         </section>
 
     </main>
 
+    <!-- ==================== REPORTS MODAL ==================== -->
+    <div id="reports-modal" class="hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-end justify-center">
+        <div class="bg-cafe-bg w-full max-w-xl rounded-t-3xl max-h-[90vh] flex flex-col animate-slide-up overflow-hidden">
+            <div class="bg-white px-4 py-3.5 border-b border-cafe-border flex items-center justify-between shrink-0">
+                <div>
+                    <h2 class="font-sans text-lg font-extrabold text-cafe-text">Sales & Profit Reports</h2>
+                    <p class="text-[11px] text-cafe-muted">Revenue, cost, profit & top sellers</p>
+                </div>
+                <button type="button" onclick="closeReportsModal()" class="w-8 h-8 bg-cafe-bg rounded-full flex items-center justify-center text-cafe-text">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div class="p-4 overflow-y-auto space-y-4 flex-1">
+                <div class="bg-cafe-surface p-1 rounded-full grid grid-cols-3 text-xs font-bold border border-cafe-border">
+                    <button type="button" id="rep-today" onclick="setReportPeriod('today')" class="py-1.5 rounded-full bg-cafe-espresso text-white shadow-xs transition-all">
+                        Today
+                    </button>
+                    <button type="button" id="rep-week" onclick="setReportPeriod('week')" class="py-1.5 rounded-full text-cafe-muted transition-all">
+                        7 Days
+                    </button>
+                    <button type="button" id="rep-all" onclick="setReportPeriod('all')" class="py-1.5 rounded-full text-cafe-muted transition-all">
+                        All Time
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-white p-3.5 rounded-2xl border border-cafe-border shadow-cafe">
+                        <p class="text-[11px] font-semibold text-cafe-muted">Total Sales / Revenue</p>
+                        <p id="rep-revenue" class="font-sans text-lg font-extrabold text-cafe-text mt-0.5 tabular-nums">₱0.00</p>
+                    </div>
+                    <div class="bg-white p-3.5 rounded-2xl border border-cafe-border shadow-cafe">
+                        <p class="text-[11px] font-semibold text-cafe-muted">Net Profit (Kita)</p>
+                        <p id="rep-profit" class="font-sans text-lg font-extrabold text-cafe-green mt-0.5 tabular-nums">₱0.00</p>
+                    </div>
+                    <div class="bg-white p-3.5 rounded-2xl border border-cafe-border shadow-cafe">
+                        <p class="text-[11px] font-semibold text-cafe-muted">Cost of Goods (Puhunan)</p>
+                        <p id="rep-cost" class="font-sans text-base font-extrabold text-cafe-text mt-0.5 tabular-nums">₱0.00</p>
+                    </div>
+                    <div class="bg-white p-3.5 rounded-2xl border border-cafe-border shadow-cafe">
+                        <p class="text-[11px] font-semibold text-cafe-muted">Profit Margin</p>
+                        <p id="rep-margin" class="font-sans text-base font-extrabold text-cafe-espresso mt-0.5 tabular-nums">0%</p>
+                        <p class="text-[10px] text-cafe-muted mt-0.5"><span id="rep-orders">0</span> completed orders</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe space-y-3">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-cafe-caramel">Top Selling Items</h3>
+                    <div id="rep-top-items" class="space-y-2.5"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ==================== BOTTOM NAVIGATION BAR ==================== -->
     <nav class="fixed bottom-0 left-0 right-0 z-30 cafe-blur border-t border-cafe-border safe-bottom shadow-cafe-nav">
-        <div class="max-w-xl mx-auto px-2 pt-1.5 pb-1 grid grid-cols-5 items-end text-center">
-            <!-- POS / Home -->
-            <button id="nav-pos" onclick="switchTab('pos')" class="nav-btn flex flex-col items-center justify-center py-1 text-cafe-espresso tap-scale">
+        <div class="max-w-xl mx-auto px-2 pt-2 pb-1.5 grid grid-cols-5 items-center gap-1 text-center">
+            <button type="button" id="nav-pos" onclick="switchTab('pos')" class="nav-btn is-floating flex flex-col items-center justify-center py-1.5 text-cafe-espresso relative">
                 <i data-lucide="home" class="w-5 h-5"></i>
                 <span class="text-[11px] font-bold mt-0.5">POS</span>
             </button>
 
-            <!-- Inventory -->
-            <button id="nav-inventory" onclick="switchTab('inventory')" class="nav-btn flex flex-col items-center justify-center py-1 text-cafe-muted tap-scale">
+            <button type="button" id="nav-inventory" onclick="switchTab('inventory')" class="nav-btn flex flex-col items-center justify-center py-1.5 text-cafe-muted relative">
                 <i data-lucide="package" class="w-5 h-5"></i>
                 <span class="text-[11px] font-semibold mt-0.5">Stock</span>
             </button>
 
-            <!-- Center Elevated Cart / Order Button -->
-            <div class="relative flex justify-center -mt-4">
-                <button id="nav-cart" onclick="openCartModal()" aria-label="Open Cart"
-                    class="w-14 h-14 rounded-full bg-cafe-espresso text-white shadow-cafe-lg border-4 border-[var(--theme-bg)] flex flex-col items-center justify-center tap-scale relative">
-                    <i data-lucide="shopping-bag" class="w-5 h-5"></i>
-                    <span class="text-[10px] font-bold leading-none mt-0.5">Cart</span>
-                    <span id="nav-cart-badge" class="hidden absolute -top-1 -right-1 bg-amber-400 text-cafe-espressoDark text-[10px] font-extrabold min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center shadow-xs">0</span>
-                </button>
-            </div>
+            <button type="button" id="nav-cart" onclick="openCartModal()" aria-label="Open Cart"
+                class="nav-btn flex flex-col items-center justify-center py-1.5 text-cafe-muted relative">
+                <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+                <span class="text-[11px] font-semibold mt-0.5">Cart</span>
+                <span id="nav-cart-badge" class="hidden absolute top-0.5 right-3 bg-amber-400 text-cafe-espressoDark text-[10px] font-extrabold min-w-[18px] h-4.5 px-1 rounded-full flex items-center justify-center shadow-xs">0</span>
+            </button>
 
-            <!-- Utang & Sales -->
-            <button id="nav-sales" onclick="switchTab('sales')" class="nav-btn flex flex-col items-center justify-center py-1 text-cafe-muted tap-scale relative">
+            <button type="button" id="nav-sales" onclick="switchTab('sales')" class="nav-btn flex flex-col items-center justify-center py-1.5 text-cafe-muted relative">
                 <i data-lucide="book-open" class="w-5 h-5"></i>
                 <span class="text-[11px] font-semibold mt-0.5">Utang</span>
                 <span id="nav-utang-dot" class="hidden absolute top-1 right-4 w-2 h-2 rounded-full bg-cafe-red"></span>
             </button>
 
-            <!-- Store & Reports -->
-            <button id="nav-store" onclick="switchTab('store')" class="nav-btn flex flex-col items-center justify-center py-1 text-cafe-muted tap-scale">
-                <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
-                <span class="text-[11px] font-semibold mt-0.5">Store</span>
+            <button type="button" id="nav-store" onclick="switchTab('store')" class="nav-btn flex flex-col items-center justify-center py-1.5 text-cafe-muted relative">
+                <i data-lucide="smartphone" class="w-5 h-5"></i>
+                <span class="text-[11px] font-semibold mt-0.5">GCash</span>
             </button>
         </div>
     </nav>
@@ -635,12 +612,8 @@
             </div>
 
             <div class="p-4 overflow-y-auto space-y-4 flex-1">
-                <!-- Cart Items List -->
-                <div id="cart-items-list" class="space-y-2.5">
-                    <!-- Rendered via JS -->
-                </div>
+                <div id="cart-items-list" class="space-y-2.5"></div>
 
-                <!-- Payment Method Selector -->
                 <div id="cart-payment-section" class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe space-y-3">
                     <label class="text-[11px] font-bold uppercase tracking-wider text-cafe-caramel block">Payment Method</label>
                     <div class="grid grid-cols-3 gap-2">
@@ -658,10 +631,9 @@
                         </button>
                     </div>
 
-                    <!-- Cash Tendered & Sukli Calculator -->
                     <div id="payment-cash-fields" class="pt-2 border-t border-cafe-border/60 space-y-2.5">
                         <div class="flex items-center justify-between flex-wrap gap-1.5">
-                            <label class="text-xs font-bold text-cafe-text">Cash Received (Bayad)</label>
+                            <label class="text-xs font-bold text-cafe-text">Cash Received</label>
                             <div class="flex gap-1.5" id="quick-cash-buttons"></div>
                         </div>
                         <div class="relative">
@@ -670,35 +642,32 @@
                                 class="w-full bg-cafe-bg rounded-xl pl-8 pr-4 py-2.5 text-base font-bold outline-none border border-cafe-border focus:border-cafe-espresso">
                         </div>
                         <div class="flex items-center justify-between bg-green-50/90 px-3.5 py-2.5 rounded-xl border border-green-200/60">
-                            <span class="text-xs font-bold text-green-900">Sukli (Change):</span>
+                            <span class="text-xs font-bold text-green-900">Change:</span>
                             <span id="cash-change-display" class="text-base font-extrabold text-cafe-green tabular-nums">₱0.00</span>
                         </div>
                     </div>
 
-                    <!-- GCash Reference -->
                     <div id="payment-gcash-fields" class="hidden pt-2 border-t border-cafe-border/60">
                         <label class="text-xs font-bold text-cafe-text block mb-1">GCash Ref No. (Optional)</label>
-                        <input type="text" id="gcash-ref" placeholder="e.g., Last 4 digits" 
+                        <input type="text" id="gcash-ref" placeholder="e.g., Last 4 digits"
                             class="w-full bg-cafe-bg rounded-xl px-3.5 py-2.5 text-sm outline-none border border-cafe-border focus:border-cafe-espresso">
                     </div>
 
-                    <!-- Utang Customer Details -->
                     <div id="payment-utang-fields" class="hidden pt-2 border-t border-cafe-border/60 space-y-2.5">
                         <div>
-                            <label class="text-xs font-bold text-cafe-text block mb-1">Customer Name (Suki) *</label>
-                            <input type="text" id="utang-customer" placeholder="e.g., Aling Nena / Kuya Jun" 
+                            <label class="text-xs font-bold text-cafe-text block mb-1">Customer Name *</label>
+                            <input type="text" id="utang-customer" placeholder="e.g., Customer name"
                                 class="w-full bg-cafe-bg rounded-xl px-3.5 py-2.5 text-sm outline-none border border-cafe-border focus:border-cafe-red">
                         </div>
                         <div>
-                            <label class="text-xs font-bold text-cafe-text block mb-1">Due Date (Petsa ng Bayad)</label>
-                            <input type="date" id="utang-due-date" 
+                            <label class="text-xs font-bold text-cafe-text block mb-1">Due Date</label>
+                            <input type="date" id="utang-due-date"
                                 class="w-full bg-cafe-bg rounded-xl px-3.5 py-2.5 text-sm outline-none border border-cafe-border focus:border-cafe-red">
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Checkout Footer -->
             <div class="bg-white p-4 border-t border-cafe-border safe-bottom shrink-0">
                 <div class="flex items-center justify-between mb-3">
                     <span class="text-xs font-bold uppercase tracking-wider text-cafe-muted">Total Amount</span>
@@ -716,15 +685,14 @@
     <div id="product-modal" class="hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-end justify-center">
         <div class="bg-cafe-bg w-full max-w-xl rounded-t-3xl max-h-[92vh] flex flex-col animate-slide-up overflow-hidden">
             <div class="bg-white px-4 py-3.5 border-b border-cafe-border flex items-center justify-between shrink-0">
-                <button onclick="closeProductModal()" class="text-xs font-bold text-cafe-muted">Cancel</button>
+                <button type="button" onclick="closeProductModal()" class="text-xs font-bold text-cafe-muted">Cancel</button>
                 <h2 id="product-modal-title" class="font-serif text-lg font-bold text-cafe-text">Add Product</h2>
-                <button onclick="saveProduct()" class="text-xs font-bold text-cafe-espresso bg-cafe-surface px-3 py-1.5 rounded-full">Save</button>
+                <button type="button" onclick="saveProduct()" class="text-xs font-bold text-cafe-espresso bg-cafe-surface px-3 py-1.5 rounded-full">Save</button>
             </div>
 
             <form id="product-form" onsubmit="event.preventDefault(); saveProduct();" class="p-4 overflow-y-auto space-y-4 flex-1">
                 <input type="hidden" id="prod-id">
 
-                <!-- Photo / Icon Picker -->
                 <div class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe flex items-center gap-4">
                     <div id="prod-preview-box" class="w-20 h-20 rounded-2xl bg-cafe-surface border border-cafe-border flex items-center justify-center text-4xl overflow-hidden shrink-0">
                         ☕
@@ -745,17 +713,16 @@
                     </div>
                 </div>
 
-                <!-- Product Details -->
                 <div class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe space-y-3">
                     <div>
                         <label class="text-xs font-bold text-cafe-muted block mb-1">Product Name *</label>
-                        <input type="text" id="prod-name" required placeholder="e.g., Iced Spanish Latte / Karne Norte" 
+                        <input type="text" id="prod-name" required placeholder="e.g., Milo 24g / Iced Latte"
                             class="w-full bg-cafe-bg rounded-xl px-3.5 py-2.5 text-sm font-semibold border border-cafe-border outline-none focus:border-cafe-espresso">
                     </div>
 
                     <div>
                         <label class="text-xs font-bold text-cafe-muted block mb-1">Short Description / Note</label>
-                        <input type="text" id="prod-desc" placeholder="e.g., Smooth espresso with condensed milk" 
+                        <input type="text" id="prod-desc" placeholder="e.g., Chocolate malt energy drink pack"
                             class="w-full bg-cafe-bg rounded-xl px-3.5 py-2 text-xs border border-cafe-border outline-none focus:border-cafe-espresso">
                     </div>
 
@@ -779,24 +746,23 @@
                         </div>
                         <select id="prod-category" class="w-full bg-cafe-bg rounded-xl px-3.5 py-2.5 text-sm font-semibold border border-cafe-border outline-none focus:border-cafe-espresso"></select>
                         <div id="new-category-box" class="hidden mt-2 flex gap-2">
-                            <input type="text" id="new-category-name" placeholder="Enter custom category..." 
+                            <input type="text" id="new-category-name" placeholder="Enter custom category..."
                                 class="flex-1 bg-cafe-bg rounded-xl px-3 py-2 text-sm border border-cafe-border outline-none">
                             <button type="button" onclick="addCustomCategory()" class="px-3.5 py-2 bg-cafe-espresso text-white rounded-xl text-xs font-bold">Add</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Pricing & Stock -->
                 <div class="bg-white rounded-2xl p-4 border border-cafe-border shadow-cafe space-y-3">
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="text-xs font-bold text-cafe-muted block mb-1">Original Cost / Puhunan (₱) *</label>
-                            <input type="number" id="prod-cost" step="0.01" min="0" required placeholder="0.00" 
+                            <label class="text-xs font-bold text-cafe-muted block mb-1">Original Cost / Capital (₱) *</label>
+                            <input type="number" id="prod-cost" step="0.01" min="0" required placeholder="0.00"
                                 class="w-full bg-cafe-bg rounded-xl px-3.5 py-2.5 text-sm font-semibold border border-cafe-border outline-none focus:border-cafe-espresso">
                         </div>
                         <div>
-                            <label class="text-xs font-bold text-cafe-muted block mb-1">Selling Price / Benta (₱) *</label>
-                            <input type="number" id="prod-price" step="0.01" min="0" required placeholder="0.00" 
+                            <label class="text-xs font-bold text-cafe-muted block mb-1">Selling Price / Retail (₱) *</label>
+                            <input type="number" id="prod-price" step="0.01" min="0" required placeholder="0.00"
                                 class="w-full bg-cafe-bg rounded-xl px-3.5 py-2.5 text-sm font-bold border border-cafe-border outline-none focus:border-cafe-espresso">
                         </div>
                     </div>
@@ -804,18 +770,17 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="text-xs font-bold text-cafe-muted block mb-1">Current Stock *</label>
-                            <input type="number" id="prod-stock" min="0" required placeholder="0" 
+                            <input type="number" id="prod-stock" min="0" required placeholder="0"
                                 class="w-full bg-cafe-bg rounded-xl px-3.5 py-2.5 text-sm font-bold border border-cafe-border outline-none focus:border-cafe-espresso">
                         </div>
                         <div>
                             <label class="text-xs font-bold text-cafe-muted block mb-1">Low Stock Alert At</label>
-                            <input type="number" id="prod-threshold" min="0" value="5" 
+                            <input type="number" id="prod-threshold" min="0" value="5"
                                 class="w-full bg-cafe-bg rounded-xl px-3.5 py-2.5 text-sm font-semibold border border-cafe-border outline-none focus:border-cafe-espresso">
                         </div>
                     </div>
                 </div>
 
-                <!-- Delete Product Button -->
                 <div id="prod-delete-container" class="hidden pt-1 pb-6">
                     <button type="button" onclick="confirmDeleteProduct()" class="w-full py-3 bg-white text-cafe-red border border-red-200 rounded-full font-bold text-xs shadow-cafe tap-scale">
                         Delete Product from Store
@@ -825,18 +790,16 @@
         </div>
     </div>
 
-    <!-- ==================== MODAL 3: ALERTS DRAWER (LOW STOCK & DUE UTANG) ==================== -->
+    <!-- ==================== MODAL 3: ALERTS DRAWER ==================== -->
     <div id="alerts-modal" class="hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-end justify-center">
         <div class="bg-cafe-bg w-full max-w-xl rounded-t-3xl max-h-[80vh] flex flex-col animate-slide-up overflow-hidden">
             <div class="bg-white px-4 py-3.5 border-b border-cafe-border flex items-center justify-between">
                 <h2 class="font-serif text-lg font-bold text-cafe-text">Store Notifications</h2>
-                <button onclick="closeAlertsDrawer()" class="w-8 h-8 bg-cafe-bg rounded-full flex items-center justify-center text-cafe-text">
+                <button type="button" onclick="closeAlertsDrawer()" class="w-8 h-8 bg-cafe-bg rounded-full flex items-center justify-center text-cafe-text">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
-            <div id="alerts-list" class="p-4 overflow-y-auto space-y-2.5">
-                <!-- Rendered via JS -->
-            </div>
+            <div id="alerts-list" class="p-4 overflow-y-auto space-y-2.5"></div>
         </div>
     </div>
 
@@ -848,8 +811,8 @@
                 <p id="confirm-desc" class="text-xs text-cafe-muted mt-1.5 leading-relaxed">Are you sure you want to proceed?</p>
             </div>
             <div class="grid grid-cols-2 border-t border-cafe-border divide-x divide-cafe-border">
-                <button onclick="closeConfirmModal()" class="py-3 text-xs font-bold text-cafe-muted active:bg-cafe-bg">Cancel</button>
-                <button id="confirm-yes-btn" class="py-3 text-xs font-bold text-cafe-espresso active:bg-cafe-bg">Confirm</button>
+                <button type="button" onclick="closeConfirmModal()" class="py-3 text-xs font-bold text-cafe-muted active:bg-cafe-bg">Cancel</button>
+                <button type="button" id="confirm-yes-btn" class="py-3 text-xs font-bold text-cafe-espresso active:bg-cafe-bg">Confirm</button>
             </div>
         </div>
     </div>
@@ -877,7 +840,6 @@
                     </div>
                 </div>
 
-                <!-- Photo / Image Barcode Scan Option -->
                 <div class="bg-white rounded-2xl p-3 border border-cafe-border shadow-cafe flex items-center justify-between gap-2.5">
                     <div class="min-w-0">
                         <p class="text-xs font-bold text-cafe-text">Scan Barcode Photo</p>
@@ -907,17 +869,19 @@
     <!-- ==================== JAVASCRIPT APPLICATION LOGIC ==================== -->
     <script>
         const STORAGE_KEYS = {
-            PRODUCTS: 'brew_bliss_pos_products_v2',
-            CATEGORIES: 'sari_sari_pos_categories_v3',
-            TRANSACTIONS: 'brew_bliss_pos_transactions_v2',
-            BRANDING: 'brew_bliss_pos_branding_v2',
-            SYNC_CONFIG: 'sari_sari_pos_sync_config_v1'
+            PRODUCTS: 'sari_sari_pos_products_clean_v1',
+            CATEGORIES: 'sari_sari_pos_categories_clean_v1',
+            TRANSACTIONS: 'sari_sari_pos_transactions_clean_v1',
+            BRANDING: 'sari_sari_pos_branding_clean_v1',
+            SYNC_CONFIG: 'sari_sari_pos_sync_clean_v1',
+            GCASH_LEDGER: 'sari_sari_pos_gcash_ledger_v1'
         };
 
         const SYNC_API_ENDPOINT = 'https://api.jsonblob.com/api/jsonBlob';
         const SYNC_KV_BASE = 'https://keyvalue.immanuel.co/api/v1';
         const SYNC_NPOINT_BASE = 'https://api.npoint.io';
         const SYNC_KVDB_BASE = 'https://kvdb.io/A9xK7mP2qL5vN8w3R7tY';
+
         const DEFAULT_CATEGORIES = [
             'Beverages & Coffee',
             'Canned Goods',
@@ -928,36 +892,9 @@
             'School & Load'
         ];
 
-        // Curated Warm Aesthetic SVG Artwork Generators for Default Items
-        function makeArtSVG(bg1, bg2, emoji, accent) {
-            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180">
-                <defs>
-                    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stop-color="${bg1}"/>
-                        <stop offset="100%" stop-color="${bg2}"/>
-                    </linearGradient>
-                </defs>
-                <rect width="240" height="180" fill="url(#g)"/>
-                <circle cx="120" cy="95" r="54" fill="${accent}" opacity="0.22"/>
-                <text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" font-size="68">${emoji}</text>
-            </svg>`;
-            return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
-        }
-
-        const SAMPLE_PRODUCTS = [
-            { id: 'p1', name: 'Nescafe Twin Pack', desc: 'Creamy white 3-in-1 instant coffee sachet', barcode: '4800016644012', category: 'Beverages & Coffee', price: 15, cost: 11.50, stock: 40, threshold: 10, badge: 'BESTSELLER', emoji: '☕', image: makeArtSVG('#3A1F10', '#6E4226', '☕', '#F5D0A9') },
-            { id: 'p2', name: 'Coke Mismo 295ml', desc: 'Chilled classic soft drink bottle', barcode: '5449000000996', category: 'Beverages & Coffee', price: 18, cost: 14, stock: 24, threshold: 6, badge: 'POPULAR', emoji: '🥤', image: makeArtSVG('#4A2C18', '#8B5A2B', '🥤', '#FFE4C4') },
-            { id: 'p3', name: 'CDO Karne Norte 150g', desc: 'Classic corned beef pantry staple', barcode: '4800888111223', category: 'Canned Goods', price: 38, cost: 31.50, stock: 16, threshold: 5, badge: "CHEF'S PICK", emoji: '🥫', image: makeArtSVG('#4E1E16', '#8C3B2B', '🥫', '#FADBD8') },
-            { id: 'p4', name: 'Lucky Me Pancit Canton', desc: 'Sweet & Spicy instant noodles pack', barcode: '4807770270415', category: 'Instant Noodles', price: 16, cost: 12.50, stock: 4, threshold: 8, badge: 'LOW STOCK', emoji: '🍜', image: makeArtSVG('#6E4226', '#B87D4B', '🍜', '#FFF0DB') },
-            { id: 'p5', name: 'SkyFlakes Crackers', desc: 'Crispy salted biscuit pack', barcode: '4800010075102', category: 'Snacks & Biscuits', price: 9, cost: 6.50, stock: 22, threshold: 6, badge: 'POPULAR', emoji: '🍪', image: makeArtSVG('#4A321F', '#8C6239', '🍪', '#F4E2D0') },
-            { id: 'p6', name: 'Datu Puti Toyo 200ml', desc: 'Classic Filipino soy sauce bottle', barcode: '4800011223344', category: 'Condiments', price: 16, cost: 12, stock: 18, threshold: 5, badge: 'SARI-SARI', emoji: '🫙', image: makeArtSVG('#2C1810', '#5C3824', '🫙', '#E6B89C') },
-            { id: 'p7', name: 'Safeguard White Bar', desc: 'Germ protection bath soap bar', barcode: '4902430887766', category: 'Bath & Laundry', price: 26, cost: 21, stock: 14, threshold: 5, badge: 'SARI-SARI', emoji: '🧼', image: makeArtSVG('#3B2314', '#7D4E2D', '🧼', '#F5CBA7') },
-            { id: 'p8', name: 'Mongol Pencil No. 2', desc: 'Classic graphite pencil for school', barcode: '4806502119988', category: 'School & Load', price: 12, cost: 8.50, stock: 3, threshold: 5, badge: 'LOW STOCK', emoji: '✏️', image: makeArtSVG('#5C3A21', '#9C6B43', '✏️', '#F7E7D7') }
-        ];
-
         const CATEGORY_ICONS = {
             'All': `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`,
-            'Beverages & Coffee': `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg>`,
+            'Beverages & Coffee': `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></svg>`,
             'Canned Goods': `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="5" rx="7" ry="2.5"/><path d="M5 5v14c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V5"/><path d="M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5"/></svg>`,
             'Instant Noodles': `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11h18l-1.5 7.5a2 2 0 0 1-2 1.5h-11a2 2 0 0 1-2-1.5L3 11Z"/><path d="M8 11V6"/><path d="M12 11V4"/><path d="M16 11V6"/></svg>`,
             'Snacks & Biscuits': `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="9.5" cy="10" r="1"/><circle cx="14.5" cy="9.5" r="1"/><circle cx="12" cy="14.5" r="1"/><circle cx="8.5" cy="14" r="0.8"/></svg>`,
@@ -972,13 +909,15 @@
             products: [],
             categories: [],
             transactions: [],
+            gcash: { puhunan: 0, entries: [] },
+            gcashEntryType: 'Cash-In',
             branding: { name: 'Sari-Sari', sub: 'STORE & POS' },
-            sync: { enabled: true, key: '', blobId: null, updatedAt: 0, lastSynced: null },
+            sync: { enabled: true, key: '', blobId: null, npointId: null, updatedAt: 0, lastSynced: null },
             cart: [],
             activeTab: 'pos',
             selectedCategory: 'All',
             posSearchQuery: '',
-            posStockFilter: 'all', // 'all' | 'low' | 'instock'
+            posStockFilter: 'all',
             invSearchQuery: '',
             invLowStockOnly: false,
             salesFilter: 'all',
@@ -994,6 +933,17 @@
         let pendingPushAfterSync = false;
         let lastAdaptiveColorKey = '';
 
+        function safeCreateIcons() {
+            try {
+                if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+                    lucide.createIcons();
+                }
+            } catch (err) {
+                console.warn('Icon render warning:', err);
+            }
+        }
+
+        // ==================== ADAPTIVE COLOR FROM HERO IMAGE ====================
         function extractDominantColorFromImage(src, emojiFallback = '☕') {
             return new Promise((resolve) => {
                 const fallbackFromEmoji = {
@@ -1017,7 +967,7 @@
                 try {
                     const img = new Image();
                     img.crossOrigin = 'anonymous';
-                    img.onload = function() {
+                    img.onload = function () {
                         try {
                             const canvas = document.createElement('canvas');
                             canvas.width = 36;
@@ -1036,19 +986,15 @@
                             for (let i = 0; i < data.length; i += 4) {
                                 const a = data[i + 3];
                                 if (a < 128) continue;
-                                const r = data[i];
-                                const g = data[i + 1];
-                                const b = data[i + 2];
+                                const r = data[i], g = data[i + 1], b = data[i + 2];
                                 const max = Math.max(r, g, b);
                                 const min = Math.min(r, g, b);
                                 const sat = max === 0 ? 0 : (max - min) / max;
 
-                                // Skip near-white or near-black background pixels when possible
                                 if (max > 242 && min > 235) continue;
                                 if (max < 18) continue;
 
                                 rSum += r; gSum += g; bSum += b; count++;
-
                                 if (sat > 0.25) {
                                     satR += r; satG += g; satB += b; satCount++;
                                 }
@@ -1073,7 +1019,7 @@
                             resolve(defaultRgb);
                         }
                     };
-                    img.onerror = function() {
+                    img.onerror = function () {
                         resolve(defaultRgb);
                     };
                     img.src = src;
@@ -1093,12 +1039,12 @@
         }
 
         async function applyAdaptiveColorFromHero(topProduct) {
-            if (!topProduct) return;
-            const cacheKey = `${topProduct.id}|${topProduct.emoji || ''}|${(topProduct.image || '').slice(0, 64)}`;
+            const target = topProduct || { id: 'default', emoji: '☕', image: '' };
+            const cacheKey = `${target.id}|${target.emoji || ''}|${(target.image || '').slice(0, 64)}`;
             if (cacheKey === lastAdaptiveColorKey) return;
             lastAdaptiveColorKey = cacheKey;
 
-            const { r, g, b } = await extractDominantColorFromImage(topProduct.image, topProduct.emoji);
+            const { r, g, b } = await extractDominantColorFromImage(target.image, target.emoji);
 
             const primaryR = r * 0.44, primaryG = g * 0.44, primaryB = b * 0.44;
             const darkR = r * 0.24, darkG = g * 0.24, darkB = b * 0.24;
@@ -1135,28 +1081,14 @@
             const metaTheme = document.querySelector('meta[name="theme-color"]');
             if (metaTheme) metaTheme.setAttribute('content', rgbCss(bgR, bgG, bgB));
 
-            const soft1R = 255 - (255 - r) * 0.14;
-            const soft1G = 255 - (255 - g) * 0.14;
-            const soft1B = 255 - (255 - b) * 0.14;
-
-            const soft2R = 255 - (255 - r) * 0.24;
-            const soft2G = 255 - (255 - g) * 0.24;
-            const soft2B = 255 - (255 - b) * 0.24;
-
             const heroCard = document.getElementById('hero-banner-card');
             if (heroCard) {
                 heroCard.style.backgroundImage = `linear-gradient(135deg, ${rgbCss(darkR, darkG, darkB)} 0%, ${rgbCss(primaryR, primaryG, primaryB)} 52%, ${rgbCss(midR, midG, midB)} 100%)`;
             }
 
-            const heroVisual = document.getElementById('hero-bestseller-visual');
-            if (heroVisual) {
-                heroVisual.style.backgroundColor = rgbCss(darkR, darkG, darkB, 0.85);
-                heroVisual.style.borderColor = rgbCss(255 - (255 - r) * 0.35, 255 - (255 - g) * 0.35, 255 - (255 - b) * 0.35, 0.35);
-            }
-
             const valCard = document.getElementById('valuation-banner-card');
             if (valCard) {
-                valCard.style.backgroundImage = `linear-gradient(90deg, ${rgbCss(soft1R, soft1G, soft1B)} 0%, ${rgbCss(soft2R, soft2G, soft2B)} 100%)`;
+                valCard.style.backgroundImage = `linear-gradient(90deg, ${rgbCss(surfR, surfG, surfB)} 0%, ${rgbCss(borderR, borderG, borderB)} 100%)`;
                 valCard.style.borderColor = rgbCss(r, g, b, 0.28);
             }
 
@@ -1164,13 +1096,9 @@
             if (valBadge) {
                 valBadge.style.backgroundColor = rgbCss(primaryR, primaryG, primaryB);
             }
-
-            const navCart = document.getElementById('nav-cart');
-            if (navCart) {
-                navCart.style.backgroundColor = rgbCss(primaryR, primaryG, primaryB);
-            }
         }
 
+        // ==================== SYNC & STORAGE ====================
         function createRandomSyncKey() {
             const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
             let part = '';
@@ -1213,7 +1141,6 @@
             }
         }
 
-        // Encode/decode full store snapshot into a portable Sync Code for cross-phone transfer
         function encodeSyncCode() {
             const snapshot = {
                 syncKey: state.sync.key,
@@ -1221,7 +1148,8 @@
                 branding: state.branding,
                 products: state.products,
                 categories: state.categories,
-                transactions: state.transactions
+                transactions: state.transactions,
+                gcash: state.gcash
             };
             const jsonStr = JSON.stringify(snapshot);
             const bytes = new TextEncoder().encode(jsonStr);
@@ -1251,6 +1179,12 @@
             state.transactions = mergeTransactions(state.transactions, remote.transactions);
             state.categories = mergeCategories(state.categories, remote.categories);
             state.products = remote.products;
+            if (remote.gcash && typeof remote.gcash === 'object') {
+                state.gcash = {
+                    puhunan: Number(remote.gcash.puhunan || 0),
+                    entries: Array.isArray(remote.gcash.entries) ? remote.gcash.entries : []
+                };
+            }
             if (remote.branding && remote.branding.name) {
                 state.branding = remote.branding;
             }
@@ -1263,12 +1197,12 @@
             saveProducts();
             saveCategories();
             saveTransactions();
+            saveGCashLedger();
             saveBranding();
             saveSyncConfig();
             applyBrandingUI();
             applySyncUI();
             renderAll();
-            lucide.createIcons();
             return true;
         }
 
@@ -1373,18 +1307,18 @@
                     branding: state.branding,
                     products: state.products,
                     categories: state.categories,
-                    transactions: state.transactions
+                    transactions: state.transactions,
+                    gcash: state.gcash
                 };
 
                 let pushedOk = false;
 
-                // 1. Try npoint.io (reliable JSON store)
                 try {
                     const npointUrl = state.sync.npointId
                         ? `${SYNC_NPOINT_BASE}/${encodeURIComponent(state.sync.npointId)}`
                         : SYNC_NPOINT_BASE;
                     const npRes = await fetchWithTimeout(npointUrl, {
-                        method: state.sync.npointId ? 'POST' : 'POST',
+                        method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                         body: JSON.stringify(payload)
                     });
@@ -1393,11 +1327,8 @@
                         if (npData && npData.id) state.sync.npointId = npData.id;
                         pushedOk = true;
                     }
-                } catch (_) {
-                    // Fallback to next provider
-                }
+                } catch (_) {}
 
-                // 2. Try kvdb.io keyed by syncKey
                 if (!pushedOk) {
                     try {
                         const kvdbUrl = `${SYNC_KVDB_BASE}/${encodeURIComponent(state.sync.key)}`;
@@ -1407,12 +1338,9 @@
                             body: JSON.stringify(payload)
                         });
                         if (kRes && kRes.ok) pushedOk = true;
-                    } catch (_) {
-                        // Fallback to next provider
-                    }
+                    } catch (_) {}
                 }
 
-                // 3. Try keyvalue.immanuel.co
                 if (!pushedOk) {
                     try {
                         const kvUrl = `${SYNC_KV_BASE}/update/${encodeURIComponent(state.sync.key)}`;
@@ -1422,12 +1350,9 @@
                             body: JSON.stringify(payload)
                         });
                         if (kvRes && kvRes.ok) pushedOk = true;
-                    } catch (_) {
-                        // Fallback to JSONBlob below
-                    }
+                    } catch (_) {}
                 }
 
-                // 4. Fallback to JSONBlob
                 if (!pushedOk) {
                     let res;
                     if (state.sync.blobId && !forceCreate) {
@@ -1476,7 +1401,7 @@
             if (!state.sync.enabled || !state.sync.key) return;
             if (!navigator.onLine) {
                 updateSyncStatusUI('Offline • Local saved', 'text-cafe-orange');
-                if (showFeedback) showToast('Walang internet — naka-save sa phone', 'wifi-off', 'text-amber-300');
+                if (showFeedback) showToast('No internet connection — saved locally', 'wifi-off', 'text-amber-300');
                 return;
             }
             if (isSyncing) return;
@@ -1487,7 +1412,6 @@
             try {
                 let remote = null;
 
-                // 1. Try npoint.io if we have npointId
                 if (state.sync.npointId) {
                     try {
                         const npRes = await fetchWithTimeout(`${SYNC_NPOINT_BASE}/${encodeURIComponent(state.sync.npointId)}?t=${Date.now()}`, {
@@ -1501,7 +1425,6 @@
                     } catch (_) {}
                 }
 
-                // 2. Try kvdb.io
                 if (!remote) {
                     try {
                         const kRes = await fetchWithTimeout(`${SYNC_KVDB_BASE}/${encodeURIComponent(state.sync.key)}?t=${Date.now()}`, {
@@ -1515,7 +1438,6 @@
                     } catch (_) {}
                 }
 
-                // 3. Try keyvalue.immanuel.co
                 if (!remote) {
                     try {
                         const kvRes = await fetchWithTimeout(`${SYNC_KV_BASE}/get/${encodeURIComponent(state.sync.key)}?t=${Date.now()}`, {
@@ -1528,12 +1450,9 @@
                                 remote = JSON.parse(text);
                             }
                         }
-                    } catch (_) {
-                        // Fallback to blobId if available
-                    }
+                    } catch (_) {}
                 }
 
-                // 4. Fallback to blobId if available
                 if (!remote && state.sync.blobId) {
                     const res = await fetchWithTimeout(`${SYNC_API_ENDPOINT}/${encodeURIComponent(state.sync.blobId)}?t=${Date.now()}`, {
                         method: 'GET',
@@ -1567,12 +1486,19 @@
                         if (remote.branding && remote.branding.name) {
                             state.branding = remote.branding;
                         }
+                        if (remote.gcash && typeof remote.gcash === 'object') {
+                            state.gcash = {
+                                puhunan: Number(remote.gcash.puhunan || 0),
+                                entries: Array.isArray(remote.gcash.entries) ? remote.gcash.entries : []
+                            };
+                        }
                         state.sync.updatedAt = remoteUpdated || Date.now();
                     }
 
                     saveProducts();
                     saveCategories();
                     saveTransactions();
+                    saveGCashLedger();
                     saveBranding();
                     applyBrandingUI();
 
@@ -1580,20 +1506,18 @@
                     saveSyncConfig();
                     applySyncUI();
                     renderAll();
-                    lucide.createIcons();
 
-                    if (showFeedback) showToast('Na-sync na ang pinakabagong data!');
+                    if (showFeedback) showToast('Latest data synced!');
                 }
             } catch (err) {
                 console.warn('Cloud pull error:', err.message);
                 updateSyncStatusUI('Local saved • Use Copy Code or Export JSON', 'text-cafe-orange');
-                if (showFeedback) showToast('Naka-save sa phone; pindutin ang Copy Code para ilipat', 'hard-drive', 'text-amber-300');
+                if (showFeedback) showToast('Saved locally; tap Copy Code to transfer', 'hard-drive', 'text-amber-300');
             } finally {
                 isSyncing = false;
             }
         }
 
-        // ==================== INIT & STORAGE ====================
         function applyBrandingUI() {
             const name = (state.branding && state.branding.name) || 'Sari-Sari';
             const sub = (state.branding && state.branding.sub) || 'STORE & POS';
@@ -1655,7 +1579,7 @@
                                 showToast('Sync Code loaded!');
                                 return;
                             }
-                        } catch (err) {
+                        } catch (_) {
                             showToast('Invalid Sync Code', 'alert-circle', 'text-red-300');
                         }
                     }
@@ -1707,7 +1631,6 @@
             applyBrandingUI();
             applySyncUI();
             renderAll();
-            lucide.createIcons();
 
             if (state.sync.enabled) {
                 pullFromCloud(false);
@@ -1727,6 +1650,7 @@
                 const savedTransactions = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
                 const savedBranding = localStorage.getItem(STORAGE_KEYS.BRANDING);
                 const savedSync = localStorage.getItem(STORAGE_KEYS.SYNC_CONFIG);
+                const savedGCash = localStorage.getItem(STORAGE_KEYS.GCASH_LEDGER);
 
                 if (savedSync) {
                     const parsedSync = JSON.parse(savedSync);
@@ -1734,71 +1658,41 @@
                         enabled: parsedSync.enabled !== undefined ? Boolean(parsedSync.enabled) : true,
                         key: parsedSync.key || createRandomSyncKey(),
                         blobId: parsedSync.blobId || null,
+                        npointId: parsedSync.npointId || null,
                         updatedAt: Number(parsedSync.updatedAt || 0),
                         lastSynced: parsedSync.lastSynced || null
                     };
                 } else {
-                    state.sync = { enabled: true, key: createRandomSyncKey(), blobId: null, updatedAt: 0, lastSynced: null };
+                    state.sync = { enabled: true, key: createRandomSyncKey(), blobId: null, npointId: null, updatedAt: 0, lastSynced: null };
                 }
                 saveSyncConfig();
 
-                state.products = savedProducts ? JSON.parse(savedProducts) : JSON.parse(JSON.stringify(SAMPLE_PRODUCTS));
-                if (!savedProducts) saveProducts();
-
+                state.products = savedProducts ? JSON.parse(savedProducts) : [];
                 state.categories = savedCategories ? JSON.parse(savedCategories) : [...DEFAULT_CATEGORIES];
-                if (!savedCategories) saveCategories();
-
+                state.transactions = savedTransactions ? JSON.parse(savedTransactions) : [];
+                if (savedGCash) {
+                    const parsedGCash = JSON.parse(savedGCash);
+                    state.gcash = {
+                        puhunan: Number(parsedGCash.puhunan || 0),
+                        entries: Array.isArray(parsedGCash.entries) ? parsedGCash.entries : []
+                    };
+                }
                 if (savedBranding) {
                     state.branding = JSON.parse(savedBranding);
                 }
-
-                if (savedTransactions) {
-                    state.transactions = JSON.parse(savedTransactions);
-                } else {
-                    const now = new Date();
-                    const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                    state.transactions = [
-                        {
-                            id: 'TX-' + (Date.now() - 3600000).toString().slice(-6),
-                            date: new Date(now.getTime() - 3600000).toISOString(),
-                            items: [
-                                { productId: 'p1', name: 'Spanish Latte Iced', price: 85, cost: 42, qty: 2 },
-                                { productId: 'p3', name: 'Chocolate Muffin', price: 55, cost: 28, qty: 1 }
-                            ],
-                            total: 225,
-                            totalCost: 112,
-                            paymentMethod: 'Cash',
-                            status: 'Paid',
-                            customerName: '',
-                            dueDate: '',
-                            voided: false
-                        },
-                        {
-                            id: 'TX-' + (Date.now() - 1800000).toString().slice(-6),
-                            date: new Date(now.getTime() - 1800000).toISOString(),
-                            items: [
-                                { productId: 'p5', name: 'Clubhouse Sandwich', price: 95, cost: 52, qty: 1 },
-                                { productId: 'p7', name: 'CDO Karne Norte 150g', price: 28, cost: 22.50, qty: 2 }
-                            ],
-                            total: 151,
-                            totalCost: 97,
-                            paymentMethod: 'Utang',
-                            status: 'Unpaid',
-                            customerName: 'Aling Nena (Kanto)',
-                            dueDate: nextWeek,
-                            voided: false
-                        }
-                    ];
-                    saveTransactions();
-                }
             } catch (err) {
                 console.error('Storage error:', err);
+                state.products = [];
+                state.categories = [...DEFAULT_CATEGORIES];
+                state.transactions = [];
+                state.gcash = { puhunan: 0, entries: [] };
             }
         }
 
         function saveProducts() { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(state.products)); scheduleCloudPush(); }
         function saveCategories() { localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(state.categories)); scheduleCloudPush(); }
         function saveTransactions() { localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(state.transactions)); scheduleCloudPush(); }
+        function saveGCashLedger() { localStorage.setItem(STORAGE_KEYS.GCASH_LEDGER, JSON.stringify(state.gcash)); scheduleCloudPush(); }
         function saveBranding() { localStorage.setItem(STORAGE_KEYS.BRANDING, JSON.stringify(state.branding)); scheduleCloudPush(); }
 
         // ==================== FORMATTERS & DATE HELPERS ====================
@@ -1837,22 +1731,27 @@
         }
 
         // ==================== NAVIGATION & MASTER RENDER ====================
+        function setFloatingNavButton(activeId) {
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                const isActive = btn.id === activeId;
+                btn.classList.toggle('is-floating', isActive);
+                btn.classList.toggle('text-cafe-muted', !isActive);
+                const label = btn.querySelector('span');
+                if (label && !label.id) {
+                    label.className = `text-[11px] mt-0.5 ${isActive ? 'font-bold' : 'font-semibold'}`;
+                }
+            });
+        }
+
         function switchTab(tabName) {
             state.activeTab = tabName;
             const tabs = ['pos', 'inventory', 'sales', 'store'];
             tabs.forEach(t => {
                 const sec = document.getElementById(`tab-${t}`);
-                const nav = document.getElementById(`nav-${t}`);
                 if (sec) sec.classList.toggle('hidden', t !== tabName);
-                if (nav) {
-                    const isActive = t === tabName;
-                    nav.className = `nav-btn flex flex-col items-center justify-center py-1 tap-scale relative ${isActive ? 'text-cafe-espresso' : 'text-cafe-muted'}`;
-                    const label = nav.querySelector('span');
-                    if (label) {
-                        label.className = `text-[11px] mt-0.5 ${isActive ? 'font-bold' : 'font-semibold'}`;
-                    }
-                }
             });
+            setFloatingNavButton(`nav-${tabName}`);
+            window.scrollTo(0, 0);
 
             if (tabName === 'pos') {
                 renderPOSCategories();
@@ -1863,162 +1762,147 @@
             } else if (tabName === 'sales') {
                 renderSalesTab();
             } else if (tabName === 'store') {
-                renderReportsTab();
-                applySyncUI();
+                renderGCashTab();
             }
-            lucide.createIcons();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            renderCartBadgeAndAlerts();
+            safeCreateIcons();
         }
 
         function renderAll() {
-            renderHeroAndBanner();
             renderPOSCategories();
             renderPOSGrid();
+            renderHeroAndBanner();
             renderInventoryList();
             renderSalesTab();
-            renderReportsTab();
+            renderGCashTab();
             renderCartBadgeAndAlerts();
+            safeCreateIcons();
+        }
+
+        // ==================== TAB 1: POS HOME, HERO & VALUATION BANNER ====================
+        function getBestSellingProduct() {
+            const soldQtyByProduct = {};
+            state.transactions.forEach(tx => {
+                if (tx.voided || tx.status !== 'Paid' || !Array.isArray(tx.items)) return;
+                tx.items.forEach(item => {
+                    const key = item.productId || item.name;
+                    soldQtyByProduct[key] = (soldQtyByProduct[key] || 0) + Number(item.qty || 0);
+                });
+            });
+
+            let bestProd = null;
+            let maxSold = 0;
+
+            state.products.forEach(prod => {
+                const qtySold = soldQtyByProduct[prod.id] || soldQtyByProduct[prod.name] || 0;
+                if (qtySold > maxSold) {
+                    maxSold = qtySold;
+                    bestProd = prod;
+                }
+            });
+
+            return bestProd;
         }
 
         function renderHeroAndBanner() {
-            const activeTxs = state.transactions.filter(t => !t.voided && t.status === 'Paid');
-            let todayRevenue = 0;
-            let todayCost = 0;
-            const soldQtyByProduct = {};
-            const soldQtyByName = {};
+            let todayCollected = 0;
+            let todayKita = 0;
 
-            activeTxs.forEach(tx => {
-                if (isToday(tx.paidAt || tx.date)) {
-                    todayRevenue += Number(tx.total || 0);
-                    todayCost += Number(tx.totalCost || 0);
-                }
-                (Array.isArray(tx.items) ? tx.items : []).forEach(item => {
-                    const qty = Number(item.qty || 0);
-                    if (qty <= 0) return;
-                    if (item.productId) {
-                        soldQtyByProduct[item.productId] = (soldQtyByProduct[item.productId] || 0) + qty;
-                    }
-                    if (item.name) {
-                        const key = String(item.name).trim().toLowerCase();
-                        soldQtyByName[key] = (soldQtyByName[key] || 0) + qty;
-                    }
-                });
-            });
-            const todayKita = todayRevenue - todayCost;
-
-            // Find top-selling product based on actual sales
-            let topProduct = null;
-            let highestSold = 0;
-
-            state.products.forEach(prod => {
-                const byId = soldQtyByProduct[prod.id] || 0;
-                const byName = soldQtyByName[String(prod.name || '').trim().toLowerCase()] || 0;
-                const totalSold = Math.max(byId, byName);
-                if (totalSold > highestSold) {
-                    highestSold = totalSold;
-                    topProduct = prod;
+            state.transactions.forEach(tx => {
+                if (tx.voided || tx.status !== 'Paid') return;
+                const refDate = tx.paidAt || tx.date;
+                if (isToday(refDate)) {
+                    todayCollected += Number(tx.total || 0);
+                    todayKita += Number(tx.total || 0) - Number(tx.totalCost || 0);
                 }
             });
-
-            if (!topProduct && state.products.length > 0) {
-                topProduct = state.products[0];
-            }
-
-            applyAdaptiveColorFromHero(topProduct);
-
-            const heroImgEl = document.getElementById('hero-bestseller-img');
-            const heroEmojiEl = document.getElementById('hero-bestseller-emoji');
-            const heroNameEl = document.getElementById('hero-bestseller-name');
-            const heroTagEl = document.getElementById('hero-bestseller-tag');
-
-            if (topProduct) {
-                if (heroNameEl) heroNameEl.textContent = topProduct.name;
-                if (heroTagEl) heroTagEl.textContent = highestSold > 0 ? `MABENTA (${highestSold} SOLD)` : 'TOP ITEM';
-                if (topProduct.image && heroImgEl) {
-                    heroImgEl.src = topProduct.image;
-                    heroImgEl.alt = topProduct.name;
-                    heroImgEl.onerror = function() {
-                        this.onerror = null;
-                        this.classList.add('hidden');
-                        if (heroEmojiEl) {
-                            heroEmojiEl.textContent = topProduct.emoji || '☕';
-                            heroEmojiEl.classList.remove('hidden');
-                        }
-                    };
-                    heroImgEl.classList.remove('hidden');
-                    if (heroEmojiEl) heroEmojiEl.classList.add('hidden');
-                } else {
-                    if (heroImgEl) heroImgEl.classList.add('hidden');
-                    if (heroEmojiEl) {
-                        heroEmojiEl.textContent = topProduct.emoji || '☕';
-                        heroEmojiEl.classList.remove('hidden');
-                    }
-                }
-            }
-
-            let totalCostValue = 0;
-            let totalRetailValue = 0;
-            state.products.forEach(p => {
-                const qty = Math.max(0, Number(p.stock || 0));
-                totalCostValue += qty * Number(p.cost || 0);
-                totalRetailValue += qty * Number(p.price || 0);
-            });
-            const estProfit = totalRetailValue - totalCostValue;
 
             const salesEl = document.getElementById('hero-today-sales');
             const kitaEl = document.getElementById('hero-today-kita');
-            if (salesEl) salesEl.textContent = formatPHP(todayRevenue);
+            if (salesEl) salesEl.textContent = formatPHP(todayCollected);
             if (kitaEl) kitaEl.textContent = formatPHP(todayKita);
 
-            const invRetailEl = document.getElementById('banner-inv-retail');
-            const invCostEl = document.getElementById('banner-inv-cost');
-            const invProfitEl = document.getElementById('banner-inv-profit');
-            if (invRetailEl) invRetailEl.textContent = formatPHP(totalRetailValue);
-            if (invCostEl) invCostEl.textContent = formatPHP(totalCostValue);
-            if (invProfitEl) invProfitEl.textContent = (estProfit >= 0 ? '+' : '') + formatPHPShort(estProfit);
+            const topProduct = getBestSellingProduct();
+            const imgEl = document.getElementById('hero-bestseller-img');
+            const emojiEl = document.getElementById('hero-bestseller-emoji');
+            const nameEl = document.getElementById('hero-bestseller-name');
+
+            if (topProduct) {
+                if (nameEl) nameEl.textContent = topProduct.name;
+                if (topProduct.image && imgEl) {
+                    imgEl.src = topProduct.image;
+                    imgEl.classList.remove('hidden');
+                    if (emojiEl) emojiEl.classList.add('hidden');
+                } else {
+                    if (imgEl) {
+                        imgEl.src = '';
+                        imgEl.classList.add('hidden');
+                    }
+                    if (emojiEl) {
+                        emojiEl.textContent = topProduct.emoji || '☕';
+                        emojiEl.classList.remove('hidden');
+                    }
+                }
+                applyAdaptiveColorFromHero(topProduct);
+            } else {
+                if (nameEl) nameEl.textContent = 'Add items & make a sale';
+                if (imgEl) {
+                    imgEl.src = '';
+                    imgEl.classList.add('hidden');
+                }
+                if (emojiEl) {
+                    emojiEl.textContent = '☕';
+                    emojiEl.classList.remove('hidden');
+                }
+                applyAdaptiveColorFromHero(null);
+            }
+
+            let invCost = 0;
+            let invRetail = 0;
+            state.products.forEach(p => {
+                const qty = Math.max(0, Number(p.stock || 0));
+                invCost += qty * Number(p.cost || 0);
+                invRetail += qty * Number(p.price || 0);
+            });
+            const estProfit = invRetail - invCost;
+
+            const retailBanner = document.getElementById('banner-inv-retail');
+            const costBanner = document.getElementById('banner-inv-cost');
+            const profitBanner = document.getElementById('banner-inv-profit');
+            if (retailBanner) retailBanner.textContent = formatPHP(invRetail);
+            if (costBanner) costBanner.textContent = formatPHP(invCost);
+            if (profitBanner) profitBanner.textContent = `${estProfit >= 0 ? '+' : ''}${formatPHPShort(estProfit)}`;
         }
 
-        // ==================== TAB 1: POS CATEGORIES & PRODUCTS ====================
         function renderPOSCategories() {
             const container = document.getElementById('pos-categories');
             if (!container) return;
+
             const allCats = ['All', ...state.categories];
-
             container.innerHTML = allCats.map(cat => {
-                const isSelected = state.selectedCategory === cat;
-                const iconSvg = CATEGORY_ICONS[cat] || `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>`;
-                const shortLabel = cat === 'Beverages & Coffee' ? 'Coffee & Drinks'
-                    : cat === 'Snacks & Biscuits' ? 'Snacks'
-                    : cat === 'Bath & Laundry' ? 'Bath & Soap'
-                    : cat === 'School & Load' ? 'School & Load'
-                    : cat;
-
+                const active = state.selectedCategory === cat;
+                const iconSvg = CATEGORY_ICONS[cat] || CATEGORY_ICONS['All'];
+                const shortLabel = cat === 'All' ? 'All Items' : cat.split(' ')[0];
                 return `
-                    <button type="button" onclick="selectPOSCategory('${cat.replace(/'/g, "\\'")}')" 
-                        class="flex flex-col items-center gap-1.5 shrink-0 tap-scale group">
-                        <div class="w-12 h-12 rounded-full flex items-center justify-center border transition-all ${
-                            isSelected
+                    <button type="button" onclick="selectPOSCategory('${cat.replace(/'/g, "\\'")}')" class="flex flex-col items-center gap-1.5 shrink-0 tap-scale">
+                        <div class="w-14 h-14 rounded-full flex items-center justify-center border transition-all ${
+                            active
                                 ? 'bg-cafe-espresso text-white border-cafe-espresso shadow-cafe'
-                                : 'bg-white text-cafe-text border-cafe-border group-hover:border-cafe-espresso/50'
+                                : 'bg-white text-cafe-text border-cafe-border shadow-cafe'
                         }">
                             ${iconSvg}
                         </div>
-                        <span class="text-[11px] max-w-[72px] truncate ${isSelected ? 'font-bold text-cafe-espresso' : 'font-medium text-cafe-muted'}">
-                            ${shortLabel}
-                        </span>
+                        <span class="text-[11px] font-semibold ${active ? 'text-cafe-espresso font-bold' : 'text-cafe-muted'}">${shortLabel}</span>
                     </button>
                 `;
             }).join('');
         }
 
-        function selectPOSCategory(category) {
-            state.selectedCategory = category;
-            const titleEl = document.getElementById('pos-section-title');
-            if (titleEl) {
-                titleEl.textContent = category === 'All' ? 'Popular Picks' : category;
-            }
+        function selectPOSCategory(cat) {
+            state.selectedCategory = cat;
             renderPOSCategories();
             renderPOSGrid();
+            safeCreateIcons();
         }
 
         function cyclePOSStockFilter() {
@@ -2029,153 +1913,166 @@
             const dot = document.getElementById('pos-filter-dot');
             if (dot) dot.classList.toggle('hidden', next === 'all');
 
-            const labelMap = {
-                all: 'Showing all store items',
-                instock: 'Filter: In-stock items only',
-                low: 'Filter: Low / Out-of-stock items'
-            };
-            showToast(labelMap[next], 'sliders-horizontal', 'text-amber-300');
+            const labels = { all: 'All Items', instock: 'In Stock Only', low: 'Low / Out of Stock' };
+            showToast(`Filter: ${labels[next]}`);
             renderPOSGrid();
+            safeCreateIcons();
         }
 
         function renderPOSGrid() {
             const grid = document.getElementById('pos-grid');
-            const emptyState = document.getElementById('pos-empty');
-            if (!grid || !emptyState) return;
+            const emptyEl = document.getElementById('pos-empty');
+            const emptyTitle = document.getElementById('pos-empty-title');
+            const emptySub = document.getElementById('pos-empty-sub');
+            if (!grid || !emptyEl) return;
 
             const filtered = state.products.filter(p => {
                 const matchesCat = state.selectedCategory === 'All' || p.category === state.selectedCategory;
-                const matchesQuery = !state.posSearchQuery ||
-                    p.name.toLowerCase().includes(state.posSearchQuery) ||
-                    (p.desc && p.desc.toLowerCase().includes(state.posSearchQuery)) ||
-                    (p.barcode && String(p.barcode).toLowerCase().includes(state.posSearchQuery)) ||
-                    p.category.toLowerCase().includes(state.posSearchQuery);
-
-                let matchesStock = true;
-                if (state.posStockFilter === 'instock') matchesStock = p.stock > 0;
-                else if (state.posStockFilter === 'low') matchesStock = p.stock <= p.threshold;
-
+                const q = state.posSearchQuery;
+                const matchesQuery = !q ||
+                    String(p.name || '').toLowerCase().includes(q) ||
+                    String(p.desc || '').toLowerCase().includes(q) ||
+                    String(p.barcode || '').toLowerCase().includes(q) ||
+                    String(p.category || '').toLowerCase().includes(q);
+                const matchesStock =
+                    state.posStockFilter === 'all' ||
+                    (state.posStockFilter === 'instock' && Number(p.stock || 0) > 0) ||
+                    (state.posStockFilter === 'low' && Number(p.stock || 0) <= Number(p.threshold || 5));
                 return matchesCat && matchesQuery && matchesStock;
             });
 
             if (filtered.length === 0) {
                 grid.innerHTML = '';
-                emptyState.classList.remove('hidden');
+                emptyEl.classList.remove('hidden');
+                if (state.products.length === 0) {
+                    if (emptyTitle) emptyTitle.textContent = 'No products in your store yet';
+                    if (emptySub) emptySub.textContent = 'Tap Add Item below to add your own products.';
+                } else {
+                    if (emptyTitle) emptyTitle.textContent = 'No products match your filter';
+                    if (emptySub) emptySub.textContent = 'Try clearing your search or changing the category.';
+                }
+                safeCreateIcons();
                 return;
             }
 
-            emptyState.classList.add('hidden');
+            emptyEl.classList.add('hidden');
             grid.innerHTML = filtered.map(p => {
-                const isOut = p.stock <= 0;
-                const isLow = !isOut && p.stock <= p.threshold;
-                const badgeText = isOut ? 'OUT OF STOCK' : (isLow ? 'LOW STOCK' : (p.badge || 'POPULAR'));
-                const badgeColor = isOut ? 'bg-cafe-red text-white' : (isLow ? 'bg-amber-600 text-white' : 'bg-[#3D2314]/90 text-amber-100');
+                const stock = Math.max(0, Number(p.stock || 0));
+                const isOut = stock === 0;
+                const isLow = stock > 0 && stock <= Number(p.threshold || 5);
+                const badgeText = isOut ? 'OUT' : (isLow ? 'LOW' : (p.badge || 'POPULAR'));
 
-                const imgHtml = p.image
-                    ? `<img src="${p.image}" alt="${p.name}" onerror="this.onerror=null;this.src='https://placehold.co/300x200/EFE5DC/4A2C18?text=${encodeURIComponent(p.emoji || 'Sari-Sari')}';" class="w-full h-auto max-h-44 object-contain block mx-auto">`
-                    : `<div class="w-full h-32 flex items-center justify-center text-4xl bg-cafe-surface">${p.emoji || '☕'}</div>`;
+                const mediaHtml = p.image
+                    ? `<img src="${p.image}" alt="${p.name}" onerror="this.onerror=null;this.src='https://placehold.co/240x180/EFE5DC/4A2C18?text=${encodeURIComponent(p.emoji || 'Item')}';" class="w-full h-auto max-h-36 object-contain block">`
+                    : `<div class="w-full h-28 flex items-center justify-center text-4xl bg-cafe-surface/60">${p.emoji || '☕'}</div>`;
 
                 return `
-                    <div onclick="addToCart('${p.id}')" class="bg-white rounded-2xl overflow-hidden border border-cafe-border shadow-cafe flex flex-col justify-between cursor-pointer tap-scale ${isOut ? 'opacity-65' : ''}">
+                    <div class="bg-white rounded-2xl border border-cafe-border shadow-cafe overflow-hidden flex flex-col justify-between">
                         <div>
-                            <div class="relative w-full bg-cafe-surface overflow-hidden flex items-center justify-center">
-                                ${imgHtml}
-                                <span class="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[9px] font-extrabold tracking-wider uppercase ${badgeColor}">
-                                    ${badgeText}
-                                </span>
-                                <span class="absolute bottom-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/90 text-cafe-text tabular-nums">
-                                    Stock: ${p.stock}
-                                </span>
+                            <div class="relative bg-cafe-bg/50">
+                                ${mediaHtml}
+                                <span class="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider ${
+                                    isOut ? 'bg-red-100 text-cafe-red' : (isLow ? 'bg-amber-100 text-amber-800' : 'bg-white/90 text-cafe-espresso')
+                                } shadow-2xs">${badgeText}</span>
+                                <span class="absolute bottom-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/65 text-white tabular-nums">${stock} left</span>
                             </div>
-                            <div class="p-2.5 pb-1">
-                                <h4 class="text-[13px] font-bold text-cafe-text leading-snug line-clamp-1">${p.name}</h4>
-                                <p class="text-[11px] text-cafe-muted leading-tight mt-0.5 line-clamp-2">${p.desc || p.category}</p>
+
+                            <div class="p-3 pb-1.5">
+                                <h4 class="text-xs font-bold text-cafe-text leading-snug line-clamp-1">${p.name}</h4>
+                                <p class="text-[11px] text-cafe-muted line-clamp-1 mt-0.5">${p.desc || p.category}</p>
                             </div>
                         </div>
 
-                        <div class="px-2.5 pb-2.5 pt-2 flex items-center justify-between gap-1">
-                            <span class="font-sans text-[15px] font-extrabold text-cafe-text tabular-nums">${formatPHPShort(p.price)}</span>
-                            <button type="button" onclick="event.stopPropagation(); addToCart('${p.id}');" ${isOut ? 'disabled' : ''}
-                                aria-label="Add ${p.name} to cart"
-                                class="w-7 h-7 rounded-full flex items-center justify-center transition-colors shrink-0 ${
-                                    isOut ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-cafe-espresso text-white hover:bg-cafe-espressoDark'
+                        <div class="px-3 pb-3 pt-1 flex items-center justify-between gap-2">
+                            <span class="font-sans text-sm font-extrabold text-cafe-espresso tabular-nums">${formatPHPShort(p.price)}</span>
+                            <button type="button" ${isOut ? 'disabled' : `onclick="addToCart('${p.id}')"`}
+                                class="px-2.5 py-1.5 rounded-full text-[11px] font-bold tap-scale flex items-center gap-1 ${
+                                    isOut
+                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                        : 'bg-cafe-espresso text-white shadow-2xs'
                                 }">
-                                <i data-lucide="plus" class="w-4 h-4"></i>
+                                <i data-lucide="plus" class="w-3 h-3"></i>
+                                <span>Add</span>
                             </button>
                         </div>
                     </div>
                 `;
             }).join('');
-            lucide.createIcons();
+
+            safeCreateIcons();
         }
 
-        // ==================== CART & CHECKOUT LOGIC ====================
+        // ==================== CART & CHECKOUT ====================
         function addToCart(productId) {
             const prod = state.products.find(p => p.id === productId);
             if (!prod) return;
-            if (prod.stock <= 0) {
-                showToast(`${prod.name} is out of stock!`, 'alert-circle', 'text-red-300');
+            const stock = Math.max(0, Number(prod.stock || 0));
+            if (stock <= 0) {
+                showToast('Out of stock!', 'alert-circle', 'text-red-300');
                 return;
             }
 
-            const existing = state.cart.find(item => item.productId === productId);
-            const currentQty = existing ? existing.qty : 0;
-            if (currentQty + 1 > prod.stock) {
-                showToast(`Only ${prod.stock} ${prod.name} available`, 'alert-triangle', 'text-amber-300');
-                return;
-            }
-
+            const existing = state.cart.find(c => c.productId === productId);
             if (existing) {
+                if (existing.qty >= stock) {
+                    showToast(`Max available stock is ${stock}`, 'alert-circle', 'text-amber-300');
+                    return;
+                }
                 existing.qty += 1;
             } else {
                 state.cart.push({
                     productId: prod.id,
                     name: prod.name,
-                    price: Number(prod.price),
+                    price: Number(prod.price || 0),
                     cost: Number(prod.cost || 0),
                     qty: 1
                 });
             }
 
             renderCartBadgeAndAlerts();
+            safeCreateIcons();
             showToast(`Added ${prod.name} to cart`);
         }
 
         function updateCartQty(productId, delta) {
-            const idx = state.cart.findIndex(item => item.productId === productId);
+            const idx = state.cart.findIndex(c => c.productId === productId);
             if (idx === -1) return;
-
+            const item = state.cart[idx];
             const prod = state.products.find(p => p.id === productId);
-            const nextQty = state.cart[idx].qty + delta;
+            const maxStock = prod ? Math.max(0, Number(prod.stock || 0)) : item.qty;
 
+            const nextQty = item.qty + delta;
             if (nextQty <= 0) {
                 state.cart.splice(idx, 1);
-            } else if (prod && nextQty > prod.stock) {
-                showToast(`Max stock is ${prod.stock}`, 'alert-triangle', 'text-amber-300');
+            } else if (nextQty > maxStock) {
+                showToast(`Only ${maxStock} in stock`, 'alert-circle', 'text-amber-300');
                 return;
             } else {
-                state.cart[idx].qty = nextQty;
+                item.qty = nextQty;
             }
 
             renderCartModal();
             renderCartBadgeAndAlerts();
+            safeCreateIcons();
         }
 
         function clearCart() {
             state.cart = [];
             renderCartModal();
             renderCartBadgeAndAlerts();
-            showToast('Cart cleared');
+            safeCreateIcons();
         }
 
         function openCartModal() {
+            setFloatingNavButton('nav-cart');
             renderCartModal();
             document.getElementById('cart-modal').classList.remove('hidden');
-            lucide.createIcons();
+            safeCreateIcons();
         }
 
         function closeCartModal() {
             document.getElementById('cart-modal').classList.add('hidden');
+            setFloatingNavButton(`nav-${state.activeTab}`);
         }
 
         function getCartTotal() {
@@ -2275,7 +2172,7 @@
 
             const change = inputVal - total;
             if (change < 0) {
-                displayEl.textContent = `Kulng: ${formatPHP(Math.abs(change))}`;
+                displayEl.textContent = `Kulang: ${formatPHP(Math.abs(change))}`;
                 displayEl.className = 'text-sm font-extrabold text-cafe-red tabular-nums';
             } else {
                 displayEl.textContent = formatPHP(change);
@@ -2316,7 +2213,6 @@
                 }
             }
 
-            // Deduct stock
             state.cart.forEach(item => {
                 const prod = state.products.find(p => p.id === item.productId);
                 if (prod) {
@@ -2367,7 +2263,7 @@
                 navCartBadge.classList.toggle('hidden', totalQty === 0);
             }
 
-            const lowCount = state.products.filter(p => p.stock <= p.threshold).length;
+            const lowCount = state.products.filter(p => Number(p.stock || 0) <= Number(p.threshold || 5)).length;
             const unpaidUtangCount = state.transactions.filter(t => !t.voided && t.paymentMethod === 'Utang' && t.status === 'Unpaid').length;
             const alertCount = lowCount + unpaidUtangCount;
 
@@ -2393,6 +2289,7 @@
                     : 'px-3.5 py-2 rounded-full text-xs font-semibold bg-white text-cafe-text border border-cafe-border shadow-cafe flex items-center gap-1.5 tap-scale shrink-0';
             }
             renderInventoryList();
+            safeCreateIcons();
         }
 
         function renderInventoryList() {
@@ -2410,7 +2307,7 @@
             const estProfit = totalRetailValue - totalCostValue;
             document.getElementById('inv-stat-cost-value').textContent = formatPHP(totalCostValue);
             document.getElementById('inv-stat-retail-value').textContent = formatPHP(totalRetailValue);
-            document.getElementById('inv-stat-est-profit').textContent = `Est. Kita: ${estProfit >= 0 ? '+' : ''}${formatPHP(estProfit)}`;
+            document.getElementById('inv-stat-est-profit').textContent = `Est. Profit: ${estProfit >= 0 ? '+' : ''}${formatPHP(estProfit)}`;
             document.getElementById('inv-stat-total').textContent = state.products.length;
             document.getElementById('inv-stat-low').textContent = lowStockCount;
 
@@ -2419,19 +2316,21 @@
 
             const items = state.products.filter(p => {
                 const matchesQuery = !state.invSearchQuery ||
-                    p.name.toLowerCase().includes(state.invSearchQuery) ||
-                    p.category.toLowerCase().includes(state.invSearchQuery);
-                const matchesLow = !state.invLowStockOnly || p.stock <= p.threshold;
+                    String(p.name || '').toLowerCase().includes(state.invSearchQuery) ||
+                    String(p.category || '').toLowerCase().includes(state.invSearchQuery);
+                const matchesLow = !state.invLowStockOnly || Number(p.stock || 0) <= Number(p.threshold || 5);
                 return matchesQuery && matchesLow;
             });
 
             if (items.length === 0) {
-                listEl.innerHTML = `<div class="bg-white rounded-2xl p-8 text-center border border-cafe-border"><p class="text-3xl mb-2">📦</p><p class="text-sm font-bold text-cafe-text">No inventory items found</p></div>`;
+                listEl.innerHTML = `<div class="bg-white rounded-2xl p-8 text-center border border-cafe-border"><p class="text-3xl mb-2">📦</p><p class="text-sm font-bold text-cafe-text">No inventory items yet</p><p class="text-xs text-cafe-muted mt-1">Tap Add Item above to add your products.</p></div>`;
                 return;
             }
 
             listEl.innerHTML = items.map(p => {
-                const isLow = p.stock <= p.threshold;
+                const stock = Math.max(0, Number(p.stock || 0));
+                const threshold = Number(p.threshold || 5);
+                const isLow = stock <= threshold;
                 const unitKita = Number(p.price || 0) - Number(p.cost || 0);
                 const thumb = p.image
                     ? `<img src="${p.image}" alt="${p.name}" onerror="this.onerror=null;this.src='https://placehold.co/100x100/EFE5DC/4A2C18?text=${encodeURIComponent(p.emoji || 'Item')}';" class="w-12 h-12 rounded-xl object-cover shrink-0">`
@@ -2444,17 +2343,17 @@
                             <div class="min-w-0">
                                 <div class="flex items-center gap-1.5">
                                     <h4 class="text-xs font-bold text-cafe-text truncate">${p.name}</h4>
-                                    ${isLow ? `<span class="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-800 shrink-0">${p.stock === 0 ? 'OUT' : 'LOW'}</span>` : ''}
+                                    ${isLow ? `<span class="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-800 shrink-0">${stock === 0 ? 'OUT' : 'LOW'}</span>` : ''}
                                 </div>
                                 <p class="text-[11px] text-cafe-muted tabular-nums mt-0.5">
-                                    Puhunan: ${formatPHPShort(p.cost)} • Benta: <strong class="text-cafe-text">${formatPHPShort(p.price)}</strong> • Kita: <span class="text-cafe-green font-bold">+${formatPHPShort(unitKita)}</span>
+                                    Cost: ${formatPHPShort(p.cost)} • Price: <strong class="text-cafe-text">${formatPHPShort(p.price)}</strong> • Profit: <span class="text-cafe-green font-bold">+${formatPHPShort(unitKita)}</span>
                                 </p>
                             </div>
                         </div>
 
                         <div class="flex items-center gap-1.5 shrink-0">
                             <button type="button" onclick="adjustStockQuick('${p.id}', -1)" class="w-7 h-7 rounded-full bg-cafe-bg text-cafe-text font-bold border border-cafe-border tap-scale">-</button>
-                            <span class="text-xs font-extrabold w-7 text-center tabular-nums ${isLow ? 'text-cafe-red' : 'text-cafe-text'}">${p.stock}</span>
+                            <span class="text-xs font-extrabold w-7 text-center tabular-nums ${isLow ? 'text-cafe-red' : 'text-cafe-text'}">${stock}</span>
                             <button type="button" onclick="adjustStockQuick('${p.id}', 1)" class="w-7 h-7 rounded-full bg-cafe-espresso text-white font-bold tap-scale">+</button>
                         </div>
                     </div>
@@ -2471,6 +2370,7 @@
             renderPOSGrid();
             renderHeroAndBanner();
             renderCartBadgeAndAlerts();
+            safeCreateIcons();
         }
 
         function openProductModal(productId = null) {
@@ -2514,7 +2414,7 @@
 
             updateProductPreview();
             document.getElementById('product-modal').classList.remove('hidden');
-            lucide.createIcons();
+            safeCreateIcons();
         }
 
         function closeProductModal() {
@@ -2569,9 +2469,9 @@
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 const img = new Image();
-                img.onload = function() {
+                img.onload = function () {
                     const canvas = document.createElement('canvas');
                     const maxDim = 480;
                     let w = img.width;
@@ -2603,7 +2503,7 @@
             if (state.editingProductImage) {
                 box.innerHTML = `<img src="${state.editingProductImage}" alt="Preview" class="w-full h-full object-cover">`;
             } else {
-                box.innerHTML = `<span>${state.selectedEmoji || '☕'}</span>`;
+                box.innerHTML = state.selectedEmoji || '☕';
             }
         }
 
@@ -2652,11 +2552,10 @@
                     price,
                     stock,
                     threshold,
-                    badge: 'NEW',
                     image: state.editingProductImage,
-                    emoji: state.selectedEmoji
+                    emoji: state.selectedEmoji || '☕'
                 });
-                showToast('Product added to store!');
+                showToast('Product added!');
             }
 
             saveProducts();
@@ -2665,7 +2564,8 @@
         }
 
         function confirmDeleteProduct() {
-            const id = document.getElementById('prod-id').value;
+            const id = document.getElementById('prod-id')?.value;
+            if (!id) return;
             const prod = state.products.find(p => p.id === id);
             if (!prod) return;
             openConfirmModal('Delete Product?', `Remove "${prod.name}" from your store?`, () => {
@@ -2678,94 +2578,221 @@
             });
         }
 
-        // ==================== TAB 3: UTANG & SALES ====================
+        // ==================== TAB 3: UTANG & SALES LEDGER ====================
         function setSalesFilter(filter) {
             state.salesFilter = filter;
-            document.getElementById('seg-all').className = filter === 'all'
-                ? 'py-2 rounded-full bg-cafe-espresso text-white shadow-xs transition-all'
-                : 'py-2 rounded-full text-cafe-muted transition-all';
-            document.getElementById('seg-utang').className = filter === 'utang'
-                ? 'py-2 rounded-full bg-cafe-espresso text-white shadow-xs transition-all'
-                : 'py-2 rounded-full text-cafe-muted transition-all';
+            const allBtn = document.getElementById('seg-all');
+            const utangBtn = document.getElementById('seg-utang');
+            if (allBtn) {
+                allBtn.className = filter === 'all'
+                    ? 'py-2 rounded-full bg-cafe-espresso text-white shadow-xs transition-all'
+                    : 'py-2 rounded-full text-cafe-muted transition-all';
+            }
+            if (utangBtn) {
+                utangBtn.className = filter === 'utang'
+                    ? 'py-2 rounded-full bg-cafe-espresso text-white shadow-xs transition-all'
+                    : 'py-2 rounded-full text-cafe-muted transition-all';
+            }
             renderSalesTab();
         }
 
         function renderSalesTab() {
-            const activeTxs = state.transactions.filter(t => !t.voided);
-            let todayCash = 0, todayGCash = 0, totalUnpaidUtang = 0, unpaidUtangCount = 0;
+            let todayCash = 0;
+            let todayGCash = 0;
+            let unpaidUtangTotal = 0;
+            let unpaidUtangCount = 0;
 
-            activeTxs.forEach(tx => {
-                const paidDate = tx.paidAt || tx.date;
-                if (tx.status === 'Paid' && isToday(paidDate)) {
-                    if (tx.paymentMethod === 'GCash') todayGCash += tx.total;
-                    else todayCash += tx.total;
-                }
+            state.transactions.forEach(tx => {
+                if (tx.voided) return;
                 if (tx.paymentMethod === 'Utang' && tx.status === 'Unpaid') {
-                    totalUnpaidUtang += tx.total;
+                    unpaidUtangTotal += Number(tx.total || 0);
                     unpaidUtangCount += 1;
+                }
+                if (tx.status === 'Paid') {
+                    const refDate = tx.paidAt || tx.date;
+                    if (isToday(refDate)) {
+                        if (tx.paymentMethod === 'GCash') todayGCash += Number(tx.total || 0);
+                        else todayCash += Number(tx.total || 0);
+                    }
                 }
             });
 
-            document.getElementById('sales-today-total').textContent = formatPHP(todayCash + todayGCash);
-            document.getElementById('sales-breakdown').textContent = `Cash: ${formatPHPShort(todayCash)} • GCash: ${formatPHPShort(todayGCash)}`;
-            document.getElementById('sales-unpaid-utang').textContent = formatPHP(totalUnpaidUtang);
-            document.getElementById('sales-utang-count').textContent = `${unpaidUtangCount} unpaid account${unpaidUtangCount === 1 ? '' : 's'}`;
+            const todayTotalEl = document.getElementById('sales-today-total');
+            const breakdownEl = document.getElementById('sales-breakdown');
+            const unpaidEl = document.getElementById('sales-unpaid-utang');
+            const utangCountEl = document.getElementById('sales-utang-count');
 
-            const listContainer = document.getElementById('transactions-list');
-            const displayTxs = state.salesFilter === 'utang'
-                ? state.transactions.filter(t => t.paymentMethod === 'Utang' && !t.voided)
-                : state.transactions;
+            if (todayTotalEl) todayTotalEl.textContent = formatPHP(todayCash + todayGCash);
+            if (breakdownEl) breakdownEl.textContent = `Cash: ${formatPHPShort(todayCash)} • GCash: ${formatPHPShort(todayGCash)}`;
+            if (unpaidEl) unpaidEl.textContent = formatPHP(unpaidUtangTotal);
+            if (utangCountEl) utangCountEl.textContent = `${unpaidUtangCount} active account${unpaidUtangCount === 1 ? '' : 's'}`;
 
-            if (displayTxs.length === 0) {
-                listContainer.innerHTML = `<div class="bg-white rounded-2xl p-8 text-center border border-cafe-border"><p class="text-3xl mb-2">🧾</p><p class="text-sm font-bold text-cafe-text">No records found</p></div>`;
+            const listEl = document.getElementById('transactions-list');
+            if (!listEl) return;
+
+            const filteredTxs = state.transactions.filter(tx => {
+                if (state.salesFilter === 'utang') {
+                    return !tx.voided && tx.paymentMethod === 'Utang' && tx.status === 'Unpaid';
+                }
+                return true;
+            });
+
+            if (filteredTxs.length === 0) {
+                listEl.innerHTML = `<div class="bg-white rounded-2xl p-8 text-center border border-cafe-border"><p class="text-3xl mb-1.5">📒</p><p class="text-sm font-bold text-cafe-text">${state.salesFilter === 'utang' ? 'No unpaid utang!' : 'No transactions yet'}</p><p class="text-xs text-cafe-muted mt-1">${state.salesFilter === 'utang' ? 'All suki balances are settled.' : 'Complete an order on POS to record a sale.'}</p></div>`;
                 return;
             }
 
-            listContainer.innerHTML = displayTxs.map(tx => {
-                const isVoided = tx.voided;
-                const isUtang = tx.paymentMethod === 'Utang';
-                const isUnpaid = isUtang && tx.status === 'Unpaid';
-
-                let badgeHTML = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-cafe-green">CASH</span>`;
-                if (isVoided) badgeHTML = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500">VOIDED</span>`;
-                else if (isUnpaid) badgeHTML = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-cafe-red">UNPAID UTANG</span>`;
-                else if (isUtang) badgeHTML = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-cafe-green">UTANG PAID</span>`;
-                else if (tx.paymentMethod === 'GCash') badgeHTML = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700">GCASH</span>`;
-
-                const itemSummary = tx.items.map(i => `${i.qty}x ${i.name}`).join(', ');
+            listEl.innerHTML = filteredTxs.map(tx => {
+                const itemsSummary = Array.isArray(tx.items)
+                    ? tx.items.map(i => `${i.name} x${i.qty}`).join(', ')
+                    : '';
+                const isUnpaidUtang = !tx.voided && tx.paymentMethod === 'Utang' && tx.status === 'Unpaid';
+                const statusBadge = tx.voided
+                    ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500">VOIDED</span>`
+                    : (isUnpaidUtang
+                        ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-cafe-red">UNPAID UTANG</span>`
+                        : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-cafe-green">PAID • ${tx.paymentMethod}</span>`);
 
                 return `
-                    <div class="bg-white rounded-2xl p-3.5 border border-cafe-border shadow-cafe space-y-2.5 ${isVoided ? 'opacity-60' : ''}">
-                        <div class="flex items-start justify-between gap-2">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-xs font-bold text-cafe-text">${isUtang ? tx.customerName : tx.id}</span>
-                                    ${badgeHTML}
-                                </div>
-                        <p class="text-xs text-cafe-muted mt-0.5">${formatDateTime(tx.date)} ${tx.dueDate && isUnpaid ? `• Due: <span class="text-cafe-red font-bold">${tx.dueDate}</span>` : ''}</p>
+                    <div class="bg-white rounded-2xl p-3.5 border border-cafe-border shadow-cafe space-y-2 ${tx.voided ? 'opacity-60' : ''}">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                                ${statusBadge}
+                                <span class="text-xs font-bold text-cafe-text truncate">${tx.customerName || tx.id}</span>
                             </div>
-                            <span class="font-sans text-base font-extrabold tabular-nums ${isVoided ? 'line-through text-gray-400' : (isUnpaid ? 'text-cafe-red' : 'text-cafe-text')}">
-                                ${formatPHP(tx.total)}
-                            </span>
+                            <span class="font-sans text-sm font-extrabold text-cafe-text tabular-nums shrink-0">${formatPHP(tx.total)}</span>
                         </div>
-                        <p class="text-xs text-cafe-muted bg-cafe-bg p-2.5 rounded-xl leading-relaxed">${itemSummary}</p>
-                        ${!isVoided ? `
-                            <div class="flex items-center justify-end gap-2 pt-0.5">
-                                ${isUnpaid ? `
-                                    <button onclick="markUtangPaid('${tx.id}')" class="px-3.5 py-1.5 bg-cafe-espresso text-white rounded-full text-xs font-bold tap-scale flex items-center gap-1">
-                                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
-                                        <span>Mark as Paid</span>
-                                    </button>
-                                ` : ''}
-                                <button onclick="promptVoidTransaction('${tx.id}')" class="px-3 py-1.5 bg-cafe-bg text-cafe-muted hover:text-cafe-red rounded-full text-xs font-bold tap-scale border border-cafe-border">
-                                    Void
-                                </button>
+
+                        <p class="text-xs text-cafe-muted line-clamp-2">${itemsSummary}</p>
+
+                        <div class="flex items-center justify-between pt-1 border-t border-cafe-border/60 text-[11px] text-cafe-muted">
+                            <span>${formatDateTime(tx.date)}${tx.dueDate ? ` • Due: ${tx.dueDate}` : ''}</span>
+                            <div class="flex items-center gap-2">
+                                ${isUnpaidUtang ? `<button type="button" onclick="markUtangPaid('${tx.id}')" class="px-2.5 py-1 rounded-full bg-cafe-espresso text-white text-[10px] font-bold tap-scale">Mark Paid</button>` : ''}
+                                ${!tx.voided ? `<button type="button" onclick="promptVoidTransaction('${tx.id}')" class="text-[10px] font-bold text-cafe-red hover:underline">Void</button>` : ''}
                             </div>
-                        ` : ''}
+                        </div>
                     </div>
                 `;
             }).join('');
-            lucide.createIcons();
+            safeCreateIcons();
+        }
+
+        // ==================== TAB 4: GCASH DAILY LEDGER ====================
+        function selectGCashEntryType(type) {
+            state.gcashEntryType = type;
+            ['Cash-In', 'Cash-Out'].forEach(t => {
+                const btn = document.getElementById(`gcash-type-${t}`);
+                if (!btn) return;
+                const active = t === type;
+                btn.className = `gcash-type-btn py-2 px-3 rounded-xl border-2 text-xs font-bold ${
+                    active ? 'border-cafe-espresso bg-cafe-espresso text-white' : 'border-transparent bg-cafe-bg text-cafe-text'
+                }`;
+            });
+        }
+
+        function saveGCashPuhunan() {
+            const val = parseFloat(document.getElementById('gcash-puhunan-input')?.value);
+            state.gcash.puhunan = isNaN(val) || val < 0 ? 0 : val;
+            saveGCashLedger();
+            renderGCashTab();
+            showToast('GCash puhunan saved!');
+        }
+
+        function addGCashEntry() {
+            const amount = parseFloat(document.getElementById('gcash-entry-amount')?.value) || 0;
+            const fee = parseFloat(document.getElementById('gcash-entry-fee')?.value) || 0;
+            const customer = (document.getElementById('gcash-entry-customer')?.value || '').trim();
+            const ref = (document.getElementById('gcash-entry-ref')?.value || '').trim();
+
+            if (amount <= 0) {
+                showToast('Enter valid GCash amount', 'alert-circle', 'text-red-300');
+                return;
+            }
+
+            state.gcash.entries.unshift({
+                id: 'GC-' + Date.now().toString().slice(-6),
+                date: new Date().toISOString(),
+                type: state.gcashEntryType,
+                amount,
+                fee,
+                customer,
+                ref
+            });
+
+            saveGCashLedger();
+            document.getElementById('gcash-entry-amount').value = '';
+            document.getElementById('gcash-entry-fee').value = '';
+            document.getElementById('gcash-entry-customer').value = '';
+            document.getElementById('gcash-entry-ref').value = '';
+            renderGCashTab();
+            showToast(`GCash ${state.gcashEntryType} recorded!`);
+        }
+
+        function deleteGCashEntry(entryId) {
+            state.gcash.entries = state.gcash.entries.filter(e => e.id !== entryId);
+            saveGCashLedger();
+            renderGCashTab();
+            showToast('GCash entry removed');
+        }
+
+        function renderGCashTab() {
+            const puhunanInput = document.getElementById('gcash-puhunan-input');
+            if (puhunanInput && document.activeElement !== puhunanInput) {
+                puhunanInput.value = state.gcash.puhunan ? state.gcash.puhunan : '';
+            }
+
+            const entries = Array.isArray(state.gcash.entries) ? state.gcash.entries : [];
+            let todayCashIn = 0;
+            let todayCashOut = 0;
+            let todayFee = 0;
+
+            entries.forEach(e => {
+                if (!isToday(e.date)) return;
+                if (e.type === 'Cash-Out') todayCashOut += Number(e.amount || 0);
+                else todayCashIn += Number(e.amount || 0);
+                todayFee += Number(e.fee || 0);
+            });
+
+            const feeEl = document.getElementById('gcash-today-fee');
+            const inEl = document.getElementById('gcash-today-cashin');
+            const outEl = document.getElementById('gcash-today-cashout');
+            if (feeEl) feeEl.textContent = `Today Fee: +${formatPHP(todayFee)}`;
+            if (inEl) inEl.textContent = formatPHP(todayCashIn);
+            if (outEl) outEl.textContent = formatPHP(todayCashOut);
+
+            const listEl = document.getElementById('gcash-entries-list');
+            if (!listEl) return;
+
+            if (entries.length === 0) {
+                listEl.innerHTML = `<div class="bg-white rounded-2xl p-8 text-center border border-cafe-border"><p class="text-3xl mb-1.5">📱</p><p class="text-sm font-bold text-cafe-text">No GCash transactions yet</p><p class="text-xs text-cafe-muted mt-1">Record daily Cash-In or Cash-Out above.</p></div>`;
+                return;
+            }
+
+            listEl.innerHTML = entries.map(e => {
+                const isOut = e.type === 'Cash-Out';
+                const badgeClass = isOut ? 'bg-amber-50 text-amber-800' : 'bg-blue-50 text-blue-700';
+                return `
+                    <div class="bg-white rounded-2xl p-3.5 border border-cafe-border shadow-cafe flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeClass}">${e.type.toUpperCase()}</span>
+                                <span class="text-xs font-bold text-cafe-text truncate">${e.customer || e.id}</span>
+                            </div>
+                            <p class="text-[11px] text-cafe-muted mt-0.5">
+                                ${formatDateTime(e.date)} ${e.fee ? `• Fee: <strong class="text-cafe-green">+${formatPHPShort(e.fee)}</strong>` : ''} ${e.ref ? `• Ref: ${e.ref}` : ''}
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="font-sans text-sm font-extrabold text-cafe-text tabular-nums">${formatPHP(e.amount)}</span>
+                            <button type="button" onclick="deleteGCashEntry('${e.id}')" class="w-7 h-7 rounded-full bg-cafe-bg text-cafe-muted hover:text-cafe-red flex items-center justify-center border border-cafe-border tap-scale">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            safeCreateIcons();
         }
 
         function markUtangPaid(txId) {
@@ -2797,10 +2824,22 @@
         }
 
         // ==================== TAB 4: REPORTS & BACKUP ====================
+        function openReportsModal() {
+            renderReportsTab();
+            document.getElementById('reports-modal').classList.remove('hidden');
+            safeCreateIcons();
+        }
+
+        function closeReportsModal() {
+            document.getElementById('reports-modal').classList.add('hidden');
+        }
+
         function setReportPeriod(period) {
             state.reportPeriod = period;
             ['today', 'week', 'all'].forEach(p => {
-                document.getElementById(`rep-${p}`).className = p === period
+                const btn = document.getElementById(`rep-${p}`);
+                if (!btn) return;
+                btn.className = p === period
                     ? 'py-1.5 rounded-full bg-cafe-espresso text-white shadow-xs transition-all'
                     : 'py-1.5 rounded-full text-cafe-muted transition-all';
             });
@@ -2864,12 +2903,12 @@
         }
 
         function exportDataJSON() {
-            const payload = { app: 'BrewAndBlissPOS', exportedAt: new Date().toISOString(), branding: state.branding, products: state.products, categories: state.categories, transactions: state.transactions };
+            const payload = { app: 'SariSariPOS', exportedAt: new Date().toISOString(), branding: state.branding, products: state.products, categories: state.categories, transactions: state.transactions };
             const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `BrewBlissPOS_Backup_${new Date().toISOString().split('T')[0]}.json`;
+            link.download = `SariSariPOS_Backup_${new Date().toISOString().split('T')[0]}.json`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -2881,7 +2920,7 @@
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 try {
                     const parsed = JSON.parse(e.target.result);
                     if (!Array.isArray(parsed.products) || !Array.isArray(parsed.transactions)) throw new Error('Invalid format');
@@ -2895,7 +2934,7 @@
                         renderAll();
                         showToast('Backup restored!');
                     });
-                } catch (err) {
+                } catch (_) {
                     showToast('Invalid JSON backup file', 'alert-circle', 'text-red-300');
                 }
                 event.target.value = '';
@@ -2903,21 +2942,21 @@
             reader.readAsText(file);
         }
 
-        function promptResetDemo() {
-            openConfirmModal('Reset Sample Data?', 'Restore default Sari-Sari store products and sample transactions?', () => {
-                Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
+        function promptClearAllStoreData() {
+            openConfirmModal('Clear All Data?', 'Delete all products and transactions to start with an empty store?', () => {
+                state.products = [];
+                state.transactions = [];
                 state.cart = [];
-                state.branding = { name: 'Sari-Sari', sub: 'STORE & POS' };
-                loadDataFromStorage();
-                applyBrandingUI();
+                saveProducts();
+                saveTransactions();
                 renderAll();
-                showToast('Sample store restored');
+                showToast('Store cleared');
             });
         }
 
         // ==================== ALERTS DRAWER & CONFIRMATION ====================
         function openAlertsDrawer() {
-            const lowItems = state.products.filter(p => p.stock <= p.threshold);
+            const lowItems = state.products.filter(p => Number(p.stock || 0) <= Number(p.threshold || 5));
             const unpaidUtang = state.transactions.filter(t => !t.voided && t.paymentMethod === 'Utang' && t.status === 'Unpaid');
             const list = document.getElementById('alerts-list');
 
@@ -3013,7 +3052,6 @@
         }
 
         async function decodeBarcodeFromSource(source) {
-            // 1. Try native BarcodeDetector first if available
             const detector = scannerDetector || getBarcodeDetectorInstance();
             if (detector) {
                 try {
@@ -3024,7 +3062,6 @@
                 } catch (_) {}
             }
 
-            // 2. Draw frame/image to canvas for ZXing (1D & 2D barcodes) + jsQR fallback
             const canvas = document.getElementById('barcode-scan-canvas');
             if (!canvas) return null;
 
@@ -3032,7 +3069,6 @@
             const rawH = source.videoHeight || source.naturalHeight || source.height || 480;
             if (!rawW || !rawH) return null;
 
-            // Scale down very large camera photos so ZXing decodes fast and accurately
             const maxDim = 960;
             let width = rawW;
             let height = rawH;
@@ -3052,7 +3088,6 @@
             if (!ctx) return null;
             ctx.drawImage(source, 0, 0, width, height);
 
-            // Try ZXing MultiFormatReader (supports EAN-13, EAN-8, UPC, Code128, Code39, QR)
             const reader = zxingReader || getZXingReaderInstance();
             if (reader && typeof ZXing !== 'undefined') {
                 try {
@@ -3066,7 +3101,6 @@
                 } catch (_) {}
             }
 
-            // 3. Fallback to jsQR
             if (typeof jsQR !== 'undefined') {
                 try {
                     const imgData = ctx.getImageData(0, 0, width, height);
@@ -3095,7 +3129,7 @@
             if (manualInput) manualInput.value = '';
             if (photoInput) photoInput.value = '';
             if (modal) modal.classList.remove('hidden');
-            lucide.createIcons();
+            safeCreateIcons();
 
             scannerDetector = getBarcodeDetectorInstance();
             zxingReader = getZXingReaderInstance();
@@ -3112,8 +3146,7 @@
                         video: {
                             facingMode: { ideal: 'environment' },
                             width: { ideal: 1280 },
-                            height: { ideal: 720 },
-                            focusMode: 'continuous'
+                            height: { ideal: 720 }
                         },
                         audio: false
                     });
@@ -3159,113 +3192,7 @@
                 scannerRafId = requestAnimationFrame(scanFrame);
             } catch (err) {
                 console.warn('Camera preview fallback:', err);
-                if (statusEl) statusEl.textContent = 'Camera permission/device unavailable — tap Photo Scan or type code';
-            }
-        }
-
-        async function decodeBarcodeFromSource(source) {
-            // 1. Try native BarcodeDetector first if available
-            const detector = scannerDetector || getBarcodeDetectorInstance();
-            if (detector) {
-                try {
-                    const codes = await detector.detect(source);
-                    if (codes && codes.length > 0 && codes[0].rawValue) {
-                        return String(codes[0].rawValue).trim();
-                    }
-                } catch (_) {}
-            }
-
-            // 2. Fallback to jsQR for QR codes via offscreen canvas
-            if (typeof jsQR !== 'undefined') {
-                try {
-                    const canvas = document.getElementById('barcode-scan-canvas');
-                    if (!canvas) return null;
-                    const width = source.videoWidth || source.naturalWidth || source.width || 640;
-                    const height = source.videoHeight || source.naturalHeight || source.height || 480;
-                    if (!width || !height) return null;
-
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    if (!ctx) return null;
-                    ctx.drawImage(source, 0, 0, width, height);
-                    const imgData = ctx.getImageData(0, 0, width, height);
-                    const qrResult = jsQR(imgData.data, width, height, { inversionAttempts: 'attemptBoth' });
-                    if (qrResult && qrResult.data) {
-                        return String(qrResult.data).trim();
-                    }
-                } catch (_) {}
-            }
-
-            return null;
-        }
-
-        async function openBarcodeScanner(mode = 'pos') {
-            scannerMode = mode;
-            const modal = document.getElementById('barcode-modal');
-            const modeLabel = document.getElementById('scanner-mode-label');
-            const statusEl = document.getElementById('scanner-status');
-            const manualInput = document.getElementById('manual-barcode-input');
-            const photoInput = document.getElementById('barcode-photo-input');
-
-            if (modeLabel) {
-                modeLabel.textContent = mode === 'product' ? 'Product Barcode' : 'POS Quick Scan';
-            }
-            if (manualInput) manualInput.value = '';
-            if (photoInput) photoInput.value = '';
-            if (modal) modal.classList.remove('hidden');
-            lucide.createIcons();
-
-            scannerDetector = getBarcodeDetectorInstance();
-            const video = document.getElementById('barcode-video');
-
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                if (statusEl) statusEl.textContent = 'Live camera blocked — use Photo Scan or enter code below';
-                return;
-            }
-
-            try {
-                try {
-                    scannerStream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
-                        audio: false
-                    });
-                } catch (_) {
-                    scannerStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                }
-
-                if (video) {
-                    video.srcObject = scannerStream;
-                    await video.play();
-                }
-
-                if (statusEl) {
-                    statusEl.textContent = scannerDetector
-                        ? 'Point camera at barcode or tap Photo Scan'
-                        : 'Camera live — tap Photo Scan or type barcode below';
-                }
-
-                let lastScanTime = 0;
-                const scanFrame = async (now = 0) => {
-                    if (!video || video.readyState < 2) {
-                        scannerRafId = requestAnimationFrame(scanFrame);
-                        return;
-                    }
-                    if (now - lastScanTime > 160) {
-                        lastScanTime = now;
-                        const code = await decodeBarcodeFromSource(video);
-                        if (code) {
-                            handleScannedBarcode(code);
-                            return;
-                        }
-                    }
-                    scannerRafId = requestAnimationFrame(scanFrame);
-                };
-
-                scannerRafId = requestAnimationFrame(scanFrame);
-            } catch (err) {
-                console.warn('Camera preview fallback:', err);
-                if (statusEl) statusEl.textContent = 'Camera permission/device unavailable — use Photo Scan or type code';
+                if (statusEl) statusEl.textContent = 'Camera unavailable — tap Photo Scan or type barcode below';
             }
         }
 
@@ -3276,9 +3203,9 @@
             if (statusEl) statusEl.textContent = 'Reading barcode from photo...';
 
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 const img = new Image();
-                img.onload = async function() {
+                img.onload = async function () {
                     const code = await decodeBarcodeFromSource(img);
                     if (code) {
                         handleScannedBarcode(code);
@@ -3286,12 +3213,12 @@
                         if (statusEl) statusEl.textContent = 'No barcode detected in photo — type code below';
                         const manualInput = document.getElementById('manual-barcode-input');
                         if (manualInput) manualInput.focus();
-                        showToast('Hindi mabasa ang barcode sa photo; i-type ang code', 'scan-barcode', 'text-amber-300');
+                        showToast('Could not read barcode from photo; enter code manually', 'scan-barcode', 'text-amber-300');
                     }
                 };
-                img.onerror = function() {
+                img.onerror = function () {
                     if (statusEl) statusEl.textContent = 'Could not load photo — type barcode below';
-                    showToast('Hindi ma-load ang larawan', 'alert-circle', 'text-red-300');
+                    showToast('Unable to load image', 'alert-circle', 'text-red-300');
                 };
                 img.src = e.target.result;
             };
@@ -3361,11 +3288,12 @@
         let toastTimer = null;
         function showToast(message, iconName = 'check-circle-2', iconColorClass = 'text-amber-300') {
             const toast = document.getElementById('toast');
+            if (!toast) return;
             document.getElementById('toast-message').textContent = message;
             const iconEl = document.getElementById('toast-icon');
             iconEl.setAttribute('data-lucide', iconName);
             iconEl.className = `w-4 h-4 shrink-0 ${iconColorClass}`;
-            lucide.createIcons();
+            safeCreateIcons();
 
             toast.classList.remove('opacity-0', '-translate-y-4');
             toast.classList.add('opacity-100', 'translate-y-0');
