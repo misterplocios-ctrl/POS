@@ -505,23 +505,27 @@
                     <label class="block text-[11px] font-bold text-cafe-muted mb-1">Barcode / SKU (Optional)</label>
                     <div class="flex items-center gap-1.5">
                         <input id="prod-barcode" type="text" placeholder="Scan or type barcode..." class="flex-1 bg-cafe-bg border border-cafe-border rounded-xl px-3 py-2 text-xs text-cafe-text focus:outline-none focus:border-cafe-espresso">
-                        <button type="button" onclick="openBarcodeScannerModal('product')" class="px-3 py-2 rounded-xl bg-cafe-bg border border-cafe-border text-xs font-extrabold text-cafe-text hover:border-cafe-espresso tap-scale">
-                            📷 Scan
-                        </button>
-                    </div>
+                    <button type="button" onclick="openBarcodeScannerModal('product')" class="px-3 py-2 rounded-xl bg-cafe-bg border border-cafe-border text-xs font-extrabold text-cafe-text hover:border-cafe-espresso tap-scale">
+                        📷 Scan
+                    </button>
                 </div>
-                <div class="grid grid-cols-2 gap-2.5">
-                    <div>
-                        <label class="block text-[11px] font-bold text-cafe-muted mb-1">Selling Price (₱) *</label>
-                        <input id="prod-price" type="number" step="0.01" min="0" required placeholder="0.00" class="w-full bg-cafe-bg border border-cafe-border rounded-xl px-3 py-2 text-xs text-cafe-text focus:outline-none focus:border-cafe-espresso">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-bold text-cafe-muted mb-1">Cost / Capital (₱)</label>
-                        <input id="prod-cost" type="number" step="0.01" min="0" placeholder="0.00" class="w-full bg-cafe-bg border border-cafe-border rounded-xl px-3 py-2 text-xs text-cafe-text focus:outline-none focus:border-cafe-espresso">
-                    </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <div>
+                    <label class="block text-[11px] font-bold text-cafe-muted mb-1">Stock (pcs) *</label>
+                    <input id="prod-stock" type="number" min="0" required placeholder="0" class="w-full bg-cafe-bg border border-cafe-border rounded-xl px-3 py-2 text-xs font-bold text-cafe-text focus:outline-none focus:border-cafe-espresso">
                 </div>
                 <div>
-                    <label class="block text-[11px] font-bold text-cafe-muted mb-1">Manual Low Stock Alert (pcs)</label>
+                    <label class="block text-[11px] font-bold text-cafe-muted mb-1">Selling Price (₱) *</label>
+                    <input id="prod-price" type="number" step="0.01" min="0" required placeholder="0.00" class="w-full bg-cafe-bg border border-cafe-border rounded-xl px-3 py-2 text-xs text-cafe-text focus:outline-none focus:border-cafe-espresso">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-cafe-muted mb-1">Cost / Capital (₱)</label>
+                    <input id="prod-cost" type="number" step="0.01" min="0" placeholder="0.00" class="w-full bg-cafe-bg border border-cafe-border rounded-xl px-3 py-2 text-xs text-cafe-text focus:outline-none focus:border-cafe-espresso">
+                </div>
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-cafe-muted mb-1">Manual Low Stock Alert (pcs)</label>
                     <input id="prod-low-stock" type="number" min="0" placeholder="Leave blank for no low stock alert" class="w-full bg-cafe-bg border border-cafe-border rounded-xl px-3 py-2 text-xs text-cafe-text focus:outline-none focus:border-cafe-espresso">
                 </div>
 
@@ -1145,6 +1149,8 @@
         let activeBarcodeTarget = 'pos';
         let barcodeStream = null;
         let barcodeScanTimer = null;
+        let longPressTimer = null;
+        let longPressTriggered = false;
         const CLOUD_SYNC_ENDPOINTS = [
             'https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/',
             'https://kvdb.io/'
@@ -1964,6 +1970,7 @@
             const catEl = document.getElementById('prod-category');
             const datalistEl = document.getElementById('existing-categories-datalist');
             const barcodeEl = document.getElementById('prod-barcode');
+            const stockEl = document.getElementById('prod-stock');
             const priceEl = document.getElementById('prod-price');
             const costEl = document.getElementById('prod-cost');
             const lowStockEl = document.getElementById('prod-low-stock');
@@ -1991,6 +1998,7 @@
                 if (nameEl) nameEl.value = prod.name || '';
                 if (catEl) catEl.value = prod.category || '';
                 if (barcodeEl) barcodeEl.value = prod.barcode || '';
+                if (stockEl) stockEl.value = Number(prod.stock) || 0;
                 if (priceEl) priceEl.value = prod.price ?? '';
                 if (costEl) costEl.value = prod.cost ?? '';
                 if (lowStockEl) lowStockEl.value = prod.lowStockThreshold ?? '';
@@ -2015,6 +2023,7 @@
                 if (nameEl) nameEl.value = '';
                 if (catEl) catEl.value = state.selectedCategory && state.selectedCategory !== 'All' ? state.selectedCategory : '';
                 if (barcodeEl) barcodeEl.value = '';
+                if (stockEl) stockEl.value = 0;
                 if (priceEl) priceEl.value = '';
                 if (costEl) costEl.value = '';
                 if (lowStockEl) lowStockEl.value = '';
@@ -2042,6 +2051,7 @@
             const nameVal = (document.getElementById('prod-name')?.value || '').trim();
             const catVal = (document.getElementById('prod-category')?.value || '').trim();
             const barcodeVal = (document.getElementById('prod-barcode')?.value || '').trim();
+            const stockVal = Math.max(0, parseInt(document.getElementById('prod-stock')?.value || '0', 10) || 0);
             const priceVal = Math.max(0, parseFloat(document.getElementById('prod-price')?.value || '0') || 0);
             const costVal = Math.max(0, parseFloat(document.getElementById('prod-cost')?.value || '0') || 0);
             const lowRaw = (document.getElementById('prod-low-stock')?.value || '').trim();
@@ -2062,6 +2072,7 @@
                         name: nameVal,
                         category: catVal,
                         barcode: barcodeVal,
+                        stock: stockVal,
                         price: priceVal,
                         cost: costVal,
                         lowStockThreshold: lowStockVal,
@@ -2076,7 +2087,7 @@
                     name: nameVal,
                     category: catVal,
                     barcode: barcodeVal,
-                    stock: 0,
+                    stock: stockVal,
                     price: priceVal,
                     cost: costVal,
                     lowStockThreshold: lowStockVal,
@@ -2610,6 +2621,30 @@
         }
 
         // ==================== MISSING UI & LEDGER HANDLERS ====================
+        function startCardLongPress(el, productId) {
+            clearTimeout(longPressTimer);
+            longPressTriggered = false;
+            if (el) el.classList.add('long-pressing');
+            longPressTimer = setTimeout(() => {
+                longPressTriggered = true;
+                if (el) el.classList.remove('long-pressing');
+                openProductModal(productId);
+            }, 520);
+        }
+
+        function cancelCardLongPress(el) {
+            clearTimeout(longPressTimer);
+            if (el) el.classList.remove('long-pressing');
+        }
+
+        function handleCardClickAfterLongPress(productId) {
+            if (longPressTriggered) {
+                longPressTriggered = false;
+                return;
+            }
+            openProductModal(productId);
+        }
+
         function selectPOSCategory(cat) {
             state.selectedCategory = cat || 'All';
             saveState();
@@ -2673,7 +2708,7 @@
 
                 return `
                     <div class="virtual-card-item bg-white rounded-3xl border border-cafe-border p-3 shadow-cafe flex flex-col justify-between gap-2.5">
-                        <div onclick="openProductModal('${prod.id}')" class="cursor-pointer space-y-2">
+                        <div onpointerdown="startCardLongPress(this, '${prod.id}')" onpointerup="cancelCardLongPress(this)" onpointerleave="cancelCardLongPress(this)" onpointercancel="cancelCardLongPress(this)" onclick="handleCardClickAfterLongPress('${prod.id}')" class="cursor-pointer space-y-2 select-none">
                             <div class="aspect-square w-full rounded-2xl bg-cafe-bg overflow-hidden flex items-center justify-center p-2">
                                 <img src="${imgSrc}" alt="${(prod.name || '').replace(/"/g, '&quot;')}" onerror="handleImgError(this, '${prod.id}')" class="w-full h-full object-contain">
                             </div>
@@ -3055,7 +3090,7 @@
                 const imgSrc = prod.imageData || prod.imageUrl || buildProductIllustrationDataUrl(prod);
                 return `
                     <div class="bg-white rounded-2xl border border-cafe-border p-3 shadow-cafe flex items-center justify-between gap-3">
-                        <div onclick="openProductModal('${prod.id}')" class="flex items-center gap-3 min-w-0 flex-1 cursor-pointer">
+                        <div onpointerdown="startCardLongPress(this, '${prod.id}')" onpointerup="cancelCardLongPress(this)" onpointerleave="cancelCardLongPress(this)" onpointercancel="cancelCardLongPress(this)" onclick="handleCardClickAfterLongPress('${prod.id}')" class="flex items-center gap-3 min-w-0 flex-1 cursor-pointer select-none">
                             <img src="${imgSrc}" alt="${(prod.name || '').replace(/"/g, '&quot;')}" onerror="handleImgError(this, '${prod.id}')" class="w-12 h-12 rounded-xl object-contain bg-cafe-bg p-1 shrink-0">
                             <div class="min-w-0">
                                 <p class="text-xs font-extrabold text-cafe-text truncate">${prod.name}</p>
