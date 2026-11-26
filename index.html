@@ -672,6 +672,22 @@
             <p class="text-xs text-cafe-muted leading-relaxed">
                 All your products, transactions, Utang records, expenses, and GCash entries are automatically saved in your browser's local storage. Use <strong>Export JSON</strong> in the <strong>Reports</strong> tab to keep an offline backup file.
             </p>
+            <div class="bg-cafe-bg rounded-2xl p-3 border border-cafe-border space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                    <label for="sync-room-input" class="text-[11px] font-extrabold text-cafe-text">Other Device Sync Room</label>
+                    <label class="inline-flex items-center gap-1.5 text-[11px] font-bold text-cafe-text cursor-pointer">
+                        <input id="auto-sync-toggle" type="checkbox" onchange="toggleAutoSync(this.checked)" class="rounded border-cafe-border text-cafe-espresso focus:ring-0">
+                        <span>Auto Sync</span>
+                    </label>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input id="sync-room-input" type="text" oninput="updateSyncRoomCode(this.value)" placeholder="e.g., SARISARI-STORE-01" class="flex-1 bg-white border border-cafe-border rounded-xl px-3 py-1.5 text-xs font-bold text-cafe-text focus:outline-none focus:border-cafe-espresso">
+                    <button type="button" onclick="syncTransactionsNow()" class="px-3 py-1.5 rounded-xl bg-cafe-espresso text-white text-[11px] font-extrabold tap-scale">
+                        Sync Now
+                    </button>
+                </div>
+                <p id="sync-device-status" class="text-[10px] text-cafe-muted tabular-nums">Transactions synced across tabs &amp; paired room.</p>
+            </div>
             <div class="flex justify-end">
                 <button type="button" onclick="closeCloudModal()" class="px-4 py-2 rounded-full bg-cafe-espresso text-white text-xs font-extrabold tap-scale">
                     Got It
@@ -981,6 +997,9 @@
             expenses: [],
             gcashCapital: 0,
             gcashEntries: [],
+            autoSyncEnabled: true,
+            syncRoomCode: 'SARI-SYNC-DEFAULT',
+            lastSyncedAt: '',
             selectedCategory: 'All',
             stockFilter: 'all',
             ledgerFilter: 'all',
@@ -996,6 +1015,8 @@
         let posSearchTimer = null;
         let stockSearchTimer = null;
         let memoryFallbackStorage = null;
+        let syncBroadcastChannel = null;
+        let autoSyncInterval = null;
 
         function readStorageSafe(key) {
             try {
@@ -1068,13 +1089,227 @@
                     utang: Array.isArray(parsed.utang) ? parsed.utang : [],
                     expenses: Array.isArray(parsed.expenses) ? parsed.expenses : [],
                     gcashEntries: Array.isArray(parsed.gcashEntries) ? parsed.gcashEntries : [],
-                    gcashCapital: Number(parsed.gcashCapital) || 0
+                    gcashCapital: Number(parsed.gcashCapital) || 0,
+                    autoSyncEnabled: parsed.autoSyncEnabled !== false,
+                    syncRoomCode: String(parsed.syncRoomCode || 'SARI-SYNC-DEFAULT').trim() || 'SARI-SYNC-DEFAULT',
+                    lastSyncedAt: String(parsed.lastSyncedAt || '')
                 };
                 saveState();
             } catch (err) {
                 console.error('Failed to load state:', err);
                 state = defaultState();
             }
+        }
+
+        function getTransactionBundle() {
+            return {
+                sales: Array.isArray(state.sales) ? state.sales : [],
+                utang: Array.isArray(state.utang) ? state.utang : [],
+                expenses: Array.isArray(state.expenses) ? state.expenses : [],
+                gcashEntries: Array.isArray(state.gcashEntries) ? state.gcashEntries : [],
+                gcashCapital: Number(state.gcashCapital) || 0
+            };
+        }
+
+        function mergeTransactionListById(localArr, incomingArr) {
+            const map = new Map();
+            (Array.isArray(localArr) ? localArr : []).forEach((item, idx) => {
+                if (!item) return;
+                const key = item.id || `local_${idx}_${item.date || item.createdAt || ''}`;
+                map.set(key, item);
+            });
+            (Array.isArray(incomingArr) ? incomingArr : []).forEach((item, idx) => {
+                if (!item) return;
+                const key = item.id || `remote_${idx}_${item.date || item.createdAt || ''}`;
+                const existing = map.get(key);
+                if (!existing) {
+                    map.set(key, item);
+                } else if (item.status === 'paid' && existing.status !== 'paid') {
+                    map.set(key, { ...existing, ...item });
+                }
+            });
+            return Array.from(map.values()).sort((a, b) => {
+                const ta = new Date(a.date || a.createdAt || 0).getTime() || 0;
+                const tb = new Date(b.date || b.createdAt || 0).getTime() || 0;
+                return tb - ta;
+            });
+        }
+
+        function applyIncomingTransactionBundle(bundle, roomCode) {
+            if (!bundle || typeof bundle !== 'object') return false;
+            if (roomCode && state.syncRoomCode && roomCode !== state.syncRoomCode) return false;
+
+            const prevSalesLen = state.sales.length;
+            const prevUtangLen = state.utang.length;
+            const prevExpLen = state.expenses.length;
+            const prevGcLen = state.gcashEntries.length;
+
+            state.sales = mergeTransactionListById(state.sales, bundle.sales);
+            state.utang = mergeTransactionListById(state.utang, bundle.utang);
+            state.expenses = mergeTransactionListById(state.expenses, bundle.expenses);
+            state.gcashEntries = mergeTransactionListById(state.gcashEntries, bundle.gcashEntries);
+            if (typeof bundle.gcashCapital === 'number' && !isNaN(bundle.gcashCapital)) {
+                state.gcashCapital = bundle.gcashCapital;
+            }
+
+            const changed =
+                state.sales.length !== prevSalesLen ||
+                state.utang.length !== prevUtangLen ||
+                state.expenses.length !== prevExpLen ||
+                state.gcashEntries.length !== prevGcLen;
+
+            state.lastSyncedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            writeStorageSafe(STORAGE_KEY, JSON.stringify(state));
+            return changed;
+        }
+
+        function getRoomSyncStorageKey(roomCode) {
+            const clean = String(roomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '_');
+            return `sari_sari_tx_room_${clean || 'SARI_SYNC_DEFAULT'}`;
+        }
+
+        function broadcastTransactionSync(forceToast = false) {
+            if (!state.autoSyncEnabled && !forceToast) return;
+            const roomCode = (state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase();
+            state.syncRoomCode = roomCode;
+            state.lastSyncedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            const payload = {
+                type: 'TX_AUTO_SYNC',
+                roomCode,
+                syncedAt: state.lastSyncedAt,
+                bundle: getTransactionBundle()
+            };
+
+            try {
+                localStorage.setItem(getRoomSyncStorageKey(roomCode), JSON.stringify(payload));
+            } catch (e) {}
+
+            try {
+                if (syncBroadcastChannel) {
+                    syncBroadcastChannel.postMessage(payload);
+                }
+            } catch (e) {}
+
+            updateSyncStatusPill();
+            if (forceToast) {
+                showToast(`Synced transactions (${roomCode}) at ${state.lastSyncedAt}`);
+            }
+        }
+
+        function pullRoomTransactionsIfNewer() {
+            if (!state.autoSyncEnabled) return;
+            const roomCode = (state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase();
+            try {
+                const raw = localStorage.getItem(getRoomSyncStorageKey(roomCode));
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                if (parsed && parsed.bundle) {
+                    const changed = applyIncomingTransactionBundle(parsed.bundle, parsed.roomCode || roomCode);
+                    if (changed) {
+                        renderAll();
+                    } else {
+                        updateSyncStatusPill();
+                    }
+                }
+            } catch (e) {}
+        }
+
+        function initTransactionSyncListeners() {
+            try {
+                if ('BroadcastChannel' in window) {
+                    syncBroadcastChannel = new BroadcastChannel('sari_sari_pos_tx_sync');
+                    syncBroadcastChannel.onmessage = (ev) => {
+                        const data = ev && ev.data;
+                        if (!data || data.type !== 'TX_AUTO_SYNC') return;
+                        if (!state.autoSyncEnabled) return;
+                        const changed = applyIncomingTransactionBundle(data.bundle, data.roomCode);
+                        if (changed) {
+                            renderAll();
+                            showToast('New transaction synced from other device/tab');
+                        } else {
+                            updateSyncStatusPill();
+                        }
+                    };
+                }
+            } catch (e) {}
+
+            window.addEventListener('storage', (ev) => {
+                if (!ev || !ev.key || !state.autoSyncEnabled) return;
+                const roomKey = getRoomSyncStorageKey(state.syncRoomCode);
+                if (ev.key === roomKey && ev.newValue) {
+                    try {
+                        const parsed = JSON.parse(ev.newValue);
+                        const changed = applyIncomingTransactionBundle(parsed.bundle, parsed.roomCode);
+                        if (changed) {
+                            renderAll();
+                            showToast('Transactions synced automatically');
+                        }
+                    } catch (e) {}
+                } else if (ev.key === STORAGE_KEY && ev.newValue) {
+                    loadState();
+                    renderAll();
+                }
+            });
+
+            clearInterval(autoSyncInterval);
+            autoSyncInterval = setInterval(() => {
+                if (state.autoSyncEnabled) {
+                    pullRoomTransactionsIfNewer();
+                    broadcastTransactionSync(false);
+                }
+            }, 6000);
+        }
+
+        function updateSyncStatusPill() {
+            const dot = document.getElementById('sync-dot');
+            const label = document.getElementById('sync-label');
+            const statusEl = document.getElementById('sync-device-status');
+            const toggleEl = document.getElementById('auto-sync-toggle');
+            const roomInput = document.getElementById('sync-room-input');
+
+            if (toggleEl) toggleEl.checked = state.autoSyncEnabled !== false;
+            if (roomInput && document.activeElement !== roomInput) {
+                roomInput.value = state.syncRoomCode || 'SARI-SYNC-DEFAULT';
+            }
+
+            if (state.autoSyncEnabled !== false) {
+                if (dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+                if (label) {
+                    label.textContent = state.lastSyncedAt
+                        ? `Auto Sync • ${state.lastSyncedAt}`
+                        : `Auto Sync (${state.syncRoomCode || 'SARI-SYNC-DEFAULT'})`;
+                }
+                if (statusEl) {
+                    statusEl.textContent = `Room: ${state.syncRoomCode || 'SARI-SYNC-DEFAULT'} • Syncs sales, utang, expenses & GCash${state.lastSyncedAt ? ` • Last: ${state.lastSyncedAt}` : ''}`;
+                }
+            } else {
+                if (dot) dot.className = 'w-2 h-2 rounded-full bg-amber-500';
+                if (label) label.textContent = 'Auto Sync Off';
+                if (statusEl) statusEl.textContent = 'Auto sync is paused. Turn on Auto Sync to sync transactions.';
+            }
+        }
+
+        function toggleAutoSync(enabled) {
+            state.autoSyncEnabled = Boolean(enabled);
+            saveState();
+            updateSyncStatusPill();
+            if (state.autoSyncEnabled) {
+                broadcastTransactionSync(true);
+            } else {
+                showToast('Automatic transaction sync paused');
+            }
+        }
+
+        function updateSyncRoomCode(val) {
+            state.syncRoomCode = String(val || '').trim().toUpperCase() || 'SARI-SYNC-DEFAULT';
+            saveState();
+            updateSyncStatusPill();
+        }
+
+        function syncTransactionsNow() {
+            pullRoomTransactionsIfNewer();
+            broadcastTransactionSync(true);
         }
 
         function saveState() {
@@ -1084,14 +1319,11 @@
                     saveState._warned = true;
                     showToast('Browser storage full—using session memory. Export JSON to back up.');
                 }
-            } catch (err) {
-                console.error('Failed to save state:', err);
-            }
-        }
-
-        function saveState() {
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                if (state.autoSyncEnabled !== false) {
+                    broadcastTransactionSync(false);
+                } else {
+                    updateSyncStatusPill();
+                }
             } catch (err) {
                 console.error('Failed to save state:', err);
                 showToast('Storage warning: image or data too large.');
@@ -1378,16 +1610,36 @@
         }
 
         // ==================== POS & BEST-SELLER BANNER ====================
-        function getSortedProductsForPOS() {
-            const soldCounts = {};
-            state.sales.forEach(s => {
+        function getSalesMetricsByProduct() {
+            const metrics = {};
+            (state.sales || []).forEach((s, saleIdx) => {
+                const saleTime = new Date(s.date || 0).getTime() || (state.sales.length - saleIdx);
                 (s.items || []).forEach(it => {
-                    soldCounts[it.productId] = (soldCounts[it.productId] || 0) + (Number(it.qty) || 0);
+                    const pid = it.productId;
+                    if (!pid) return;
+                    if (!metrics[pid]) {
+                        metrics[pid] = { qty: 0, revenue: 0, lastSaleTime: 0 };
+                    }
+                    const q = Number(it.qty) || 0;
+                    const sub = Number(it.subtotal) || (q * (Number(it.price) || 0));
+                    metrics[pid].qty += q;
+                    metrics[pid].revenue += sub;
+                    if (saleTime > metrics[pid].lastSaleTime) {
+                        metrics[pid].lastSaleTime = saleTime;
+                    }
                 });
             });
+            return metrics;
+        }
+
+        function getSortedProductsForPOS(metricsMap = null) {
+            const metrics = metricsMap || getSalesMetricsByProduct();
             return [...state.products].sort((a, b) => {
-                const diff = (soldCounts[b.id] || 0) - (soldCounts[a.id] || 0);
-                if (diff !== 0) return diff;
+                const ma = metrics[a.id] || { qty: 0, revenue: 0, lastSaleTime: 0 };
+                const mb = metrics[b.id] || { qty: 0, revenue: 0, lastSaleTime: 0 };
+                if (mb.qty !== ma.qty) return mb.qty - ma.qty;
+                if (mb.revenue !== ma.revenue) return mb.revenue - ma.revenue;
+                if (mb.lastSaleTime !== ma.lastSaleTime) return mb.lastSaleTime - ma.lastSaleTime;
                 return (a.name || '').localeCompare(b.name || '');
             });
         }
@@ -1400,8 +1652,8 @@
             const bgEl = document.getElementById('hero-bestseller-bg');
             const actionEl = document.getElementById('hero-bestseller-action');
             if (!titleEl || !subEl || !chipsEl || !thumbEl || !actionEl) return;
-
-            const sorted = getSortedProductsForPOS();
+            const metrics = getSalesMetricsByProduct();
+            const sorted = getSortedProductsForPOS(metrics);
             const featured = sorted[0];
 
             if (!featured) {
@@ -1421,7 +1673,7 @@
                     soldCounts[it.productId] = (soldCounts[it.productId] || 0) + (Number(it.qty) || 0);
                 });
             });
-            const soldQty = soldCounts[featured.id] || 0;
+            const soldQty = (metrics[featured.id] && metrics[featured.id].qty) || 0;
             const imgSrc = getProductVisualSrc(featured);
 
             titleEl.textContent = featured.name;
@@ -1508,7 +1760,8 @@
             const q = (searchInput ? searchInput.value : '').trim().toLowerCase();
             if (clearBtn) clearBtn.classList.toggle('hidden', q.length === 0);
 
-            let items = getSortedProductsForPOS();
+            const salesMetrics = getSalesMetricsByProduct();
+            let items = getSortedProductsForPOS(salesMetrics);
             if (state.selectedCategory && state.selectedCategory !== 'All') {
                 items = items.filter(p => (p.category || '').toLowerCase() === state.selectedCategory.toLowerCase());
             }
@@ -1540,6 +1793,7 @@
                 const isLow = isProductLowStock(p);
                 const inCart = state.cart.find(c => c.productId === p.id);
                 const cartQty = inCart ? inCart.qty : 0;
+                const soldQty = (salesMetrics[p.id] && salesMetrics[p.id].qty) || 0;
 
                 const stockBadge = isOut
                     ? `<span class="px-2 py-0.5 rounded-full bg-cafe-redBg text-cafe-red text-[10px] font-extrabold">Out of stock</span>`
@@ -1556,6 +1810,7 @@
                          onclick="handlePOSCardTap(event, '${escapeJsSingle(p.id)}')"
                          class="virtual-card-item group relative bg-white rounded-3xl border border-cafe-border shadow-cafe overflow-hidden flex flex-col justify-between cursor-pointer select-none tap-scale ${isOut ? 'opacity-75' : ''}">
                         ${cartQty > 0 ? `<span style="background-color:${accent};" class="absolute top-2.5 right-2.5 z-10 min-w-[22px] h-[22px] px-1.5 rounded-full text-white text-[11px] font-extrabold flex items-center justify-center shadow tabular-nums">${cartQty}</span>` : ''}
+                        ${soldQty > 0 ? `<span class="absolute top-2.5 left-2.5 z-10 px-2 py-0.5 rounded-full bg-amber-100/95 text-cafe-amber border border-amber-200 text-[10px] font-extrabold shadow-xs tabular-nums">🔥 ${soldQty} sold</span>` : ''}
                         <div class="w-full h-32 sm:h-36 bg-cafe-bg/70 flex items-center justify-center overflow-hidden p-2">
                             ${imgSrc
                                 ? `<img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async" onerror="handleImgError(this, '${escapeJsSingle(p.id)}')" class="w-full h-full object-contain">`
@@ -2772,6 +3027,7 @@
         }
 
         function openCloudModal() {
+            updateSyncStatusPill();
             document.getElementById('cloud-modal').classList.remove('hidden');
         }
 
@@ -2833,6 +3089,7 @@
             isRendering = true;
             try {
                 updateHeaderStoreName();
+                updateSyncStatusPill();
                 updateNavStyles();
                 updateAlertBadges();
                 renderHeroBanner();
@@ -2873,7 +3130,12 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             loadState();
+            initTransactionSyncListeners();
             switchTab(state.activeTab || 'pos');
+            if (state.autoSyncEnabled !== false) {
+                pullRoomTransactionsIfNewer();
+                broadcastTransactionSync(false);
+            }
         });
     </script>
 </body>
