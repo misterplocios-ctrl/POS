@@ -686,6 +686,10 @@
                         Sync Now
                     </button>
                 </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-0.5">
+                    <input id="sync-endpoint-input" type="url" oninput="updateSyncEndpointUrl(this.value)" placeholder="Optional Cloud Endpoint URL (JSON)" class="bg-white border border-cafe-border rounded-xl px-2.5 py-1.5 text-[11px] text-cafe-text focus:outline-none focus:border-cafe-espresso">
+                    <input id="sync-apikey-input" type="text" oninput="updateSyncApiKey(this.value)" placeholder="Optional Bearer / API Key" class="bg-white border border-cafe-border rounded-xl px-2.5 py-1.5 text-[11px] text-cafe-text focus:outline-none focus:border-cafe-espresso">
+                </div>
                 <div class="flex items-center gap-1.5">
                     <button type="button" onclick="copySyncCodeForOtherDevice()" class="px-2.5 py-1 rounded-lg bg-white border border-cafe-border text-[10px] font-extrabold text-cafe-text tap-scale">
                         Copy Room Code
@@ -1046,6 +1050,8 @@
             gcashEntries: [],
             autoSyncEnabled: true,
             syncRoomCode: 'SARI-SYNC-DEFAULT',
+            syncEndpointUrl: '',
+            syncApiKey: '',
             lastSyncedAt: '',
             selectedCategory: 'All',
             stockFilter: 'all',
@@ -1077,28 +1083,230 @@
             return `SARISARI_${clean}`;
         }
 
+        function getSyncHeaders() {
+            const headers = { 'Content-Type': 'application/json' };
+            const key = String(state.syncApiKey || '').trim();
+            if (key) {
+                headers['Authorization'] = key.toLowerCase().startsWith('bearer ') ? key : `Bearer ${key}`;
+                headers['x-api-key'] = key;
+            }
+            return headers;
+        }
+
+        function getCompactSyncBundle() {
+            const full = getTransactionBundle();
+            // Prioritize custom/modified products (with photos, stock, or custom IDs) so payload stays compact & reliable
+            const priorityProducts = (full.products || []).filter(p =>
+                p && (
+                    Boolean(p.imageData) ||
+                    (p.imageUrl && !String(p.imageUrl).includes('placehold.co')) ||
+                    (Number(p.stock) || 0) > 0 ||
+                    !String(p.id || '').startsWith('prod_auto_')
+                )
+            );
+            return {
+                products: priorityProducts.slice(0, 120),
+                categories: full.categories || [],
+                sales: (full.sales || []).slice(0, 150),
+                utang: (full.utang || []).slice(0, 150),
+                expenses: (full.expenses || []).slice(0, 150),
+                gcashEntries: (full.gcashEntries || []).slice(0, 150),
+                gcashCapital: Number(full.gcashCapital) || 0
+            };
+        }
+
+        function sendRoomPayloadViaXHR(url, timeoutMs = 6000) {
+            return new Promise((resolve) => {
+                try {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', url, true);
+                    xhr.timeout = timeoutMs;
+                    xhr.onload = () => resolve(xhr.status >= 200 && xhr.status < 300);
+                    xhr.onerror = () => resolve(false);
+                    xhr.ontimeout = () => resolve(false);
+                    xhr.send();
+                } catch (err) {
+                    resolve(false);
+                }
+            });
+        }
+
+        async function pushCloudRoomTransactions(roomCode) {
+            const cleanRoom = String(roomCode || state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase() || 'SARI-SYNC-DEFAULT';
+            const customEndpoint = String(state.syncEndpointUrl || '').trim();
+            const payload = {
+                roomCode: cleanRoom,
+                updatedAt: Date.now(),
+                bundle: getCompactSyncBundle()
+            };
+
+            if (customEndpoint) {
+                try {
+                    const targetUrl = customEndpoint.includes('{room}')
+                        ? customEndpoint.replace('{room}', encodeURIComponent(cleanRoom))
+                        : customEndpoint;
+                    const res = await fetch(targetUrl, {
+                        method: 'POST',
+                        mode: 'cors',
+                        headers: getSyncHeaders(),
+                        body: JSON.stringify(payload)
+                    });
+                    if (res && res.ok) return true;
+                } catch (e) {}
+            }
+
+            const key = getCloudRoomKey(cleanRoom);
+            const rawJson = JSON.stringify(payload);
+            const encoded = encodeURIComponent(rawJson);
+
+            // Guard against overly huge URLs that public key-value endpoints may reject
+            if (encoded.length > 65000) {
+                return false;
+            }
+
+            const primaryUrl = `${CLOUD_SYNC_ENDPOINTS[0]}${key}/${encoded}`;
+            try {
+                const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+                const timer = controller ? setTimeout(() => controller.abort(), 6000) : null;
+                const res = await fetch(primaryUrl, {
+                    method: 'POST',
+                    mode: 'cors',
+                    signal: controller ? controller.signal : undefined
+                });
+                if (timer) clearTimeout(timer);
+                if (res && res.ok) return true;
+            } catch (e) {}
+
+            // Retry once via XHR fallback
+            const xhrOk = await sendRoomPayloadViaXHR(primaryUrl, 6000);
+            if (xhrOk) return true;
+
+            return await sendRoomPayloadViaXHR(primaryUrl, 7000);
+        }
+
+        async function pullCloudRoomTransactions(roomCode) {
+            const cleanRoom = String(roomCode || state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase() || 'SARI-SYNC-DEFAULT';
+            const customEndpoint = String(state.syncEndpointUrl || '').trim();
+
+            if (customEndpoint) {
+                try {
+                    const sep = customEndpoint.includes('?') ? '&' : '?';
+                    const targetUrl = customEndpoint.includes('{room}')
+                        ? customEndpoint.replace('{room}', encodeURIComponent(cleanRoom))
+                        : `${targetUrlOrBase(customEndpoint, sep, cleanRoom)}`;
+                    const res = await fetch(targetUrl, {
+                        method: 'GET',
+                        mode: 'cors',
+                        headers: getSyncHeaders()
+                    });
+                    if (res && res.ok) {
+                        const data = await res.json();
+                        const parsed = data && data.bundle ? data : (data && data.data && data.data.bundle ? data.data : null);
+                        if (parsed && parsed.bundle) {
+                            const changed = applyIncomingTransactionBundle(parsed.bundle, parsed.roomCode || cleanRoom);
+                            if (changed) renderAll();
+                            return true;
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            const key = getCloudRoomKey(cleanRoom);
+            const getUrl = `https://keyvalue.immanuel.co/api/KeyVal/GetValue/${key}`;
+            try {
+                const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+                const timer = controller ? setTimeout(() => controller.abort(), 6000) : null;
+                const res = await fetch(getUrl, {
+                    method: 'GET',
+                    mode: 'cors',
+                    signal: controller ? controller.signal : undefined
+                });
+                if (timer) clearTimeout(timer);
+                if (!res.ok) return false;
+                const txt = await res.text();
+                if (!txt) return false;
+                const cleanTxt = txt.replace(/^"|"$/g, '').replace(/\\"/g, '"');
+                const parsed = JSON.parse(cleanTxt);
+                if (parsed && parsed.bundle) {
+                    const changed = applyIncomingTransactionBundle(parsed.bundle, parsed.roomCode || cleanRoom);
+                    if (changed) {
+                        renderAll();
+                    }
+                    return true;
+                }
+            } catch (e) {}
+            return false;
+        }
+
+        function targetUrlOrBase(base, sep, room) {
+            return `${base}${sep}room=${encodeURIComponent(room)}`;
+        }
+
+        function sendRoomPayloadViaXHR(url, timeoutMs = 6000) {
+            return new Promise((resolve) => {
+                try {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', url, true);
+                    xhr.timeout = timeoutMs;
+                    xhr.onload = () => resolve(xhr.status >= 200 && xhr.status < 300);
+                    xhr.onerror = () => resolve(false);
+                    xhr.ontimeout = () => resolve(false);
+                    xhr.send();
+                } catch (err) {
+                    resolve(false);
+                }
+            });
+        }
+
         async function pushCloudRoomTransactions(roomCode) {
             const cleanRoom = String(roomCode || state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase() || 'SARI-SYNC-DEFAULT';
             const key = getCloudRoomKey(cleanRoom);
             const payload = {
                 roomCode: cleanRoom,
                 updatedAt: Date.now(),
-                bundle: getTransactionBundle()
+                bundle: getCompactSyncBundle()
             };
-            const encoded = encodeURIComponent(JSON.stringify(payload));
-            try {
-                const res = await fetch(`${CLOUD_SYNC_ENDPOINTS[0]}${key}/${encoded}`, { method: 'POST', mode: 'cors' });
-                return Boolean(res && res.ok);
-            } catch (e) {
+            const rawJson = JSON.stringify(payload);
+            const encoded = encodeURIComponent(rawJson);
+
+            // Guard against overly huge URLs that public key-value endpoints may reject
+            if (encoded.length > 65000) {
                 return false;
             }
+
+            const primaryUrl = `${CLOUD_SYNC_ENDPOINTS[0]}${key}/${encoded}`;
+            try {
+                const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+                const timer = controller ? setTimeout(() => controller.abort(), 6000) : null;
+                const res = await fetch(primaryUrl, {
+                    method: 'POST',
+                    mode: 'cors',
+                    signal: controller ? controller.signal : undefined
+                });
+                if (timer) clearTimeout(timer);
+                if (res && res.ok) return true;
+            } catch (e) {}
+
+            // Retry once via XHR fallback
+            const xhrOk = await sendRoomPayloadViaXHR(primaryUrl, 6000);
+            if (xhrOk) return true;
+
+            return await sendRoomPayloadViaXHR(primaryUrl, 7000);
         }
 
         async function pullCloudRoomTransactions(roomCode) {
             const cleanRoom = String(roomCode || state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase() || 'SARI-SYNC-DEFAULT';
             const key = getCloudRoomKey(cleanRoom);
+            const getUrl = `https://keyvalue.immanuel.co/api/KeyVal/GetValue/${key}`;
             try {
-                const res = await fetch(`https://keyvalue.immanuel.co/api/KeyVal/GetValue/${key}`, { method: 'GET', mode: 'cors' });
+                const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+                const timer = controller ? setTimeout(() => controller.abort(), 6000) : null;
+                const res = await fetch(getUrl, {
+                    method: 'GET',
+                    mode: 'cors',
+                    signal: controller ? controller.signal : undefined
+                });
+                if (timer) clearTimeout(timer);
                 if (!res.ok) return false;
                 const txt = await res.text();
                 if (!txt) return false;
@@ -1141,7 +1349,9 @@
                         writeStorageSafe(STORAGE_KEY, JSON.stringify(state));
                         updateSyncStatusPill();
                         if (showFeedback) {
-                            showToast(ok ? `Synced products, photos & tx (${roomCode})` : `Saved locally & queued for ${roomCode}`);
+                            showToast(ok
+                                ? `Cloud & local synced (${roomCode})`
+                                : `Saved locally & in room cache (${roomCode}). Use Export/Import Sync File if offline/blocked.`);
                         }
                     })
                     .catch(() => {
@@ -1451,6 +1661,8 @@
                     gcashCapital: Number(parsed.gcashCapital) || 0,
                     autoSyncEnabled: parsed.autoSyncEnabled !== false,
                     syncRoomCode: String(parsed.syncRoomCode || 'SARI-SYNC-DEFAULT').trim() || 'SARI-SYNC-DEFAULT',
+                    syncEndpointUrl: String(parsed.syncEndpointUrl || '').trim(),
+                    syncApiKey: String(parsed.syncApiKey || '').trim(),
                     lastSyncedAt: String(parsed.lastSyncedAt || '')
                 };
                 saveState();
@@ -1621,29 +1833,211 @@
             return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
         }
 
+        // Compress uploaded photos so product data stays small enough for cross-device sync
+        function handleProductPhotoImport(event) {
+            const file = event && event.target && event.target.files && event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (ev) {
+                const img = new Image();
+                img.onload = function () {
+                    const maxDim = 240;
+                    let w = img.width || maxDim;
+                    let h = img.height || maxDim;
+                    if (w > h && w > maxDim) {
+                        h = Math.round((h * maxDim) / w);
+                        w = maxDim;
+                    } else if (h >= w && h > maxDim) {
+                        w = Math.round((w * maxDim) / h);
+                        h = maxDim;
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0, w, h);
+                    }
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.68);
+                    const hiddenInput = document.getElementById('prod-image-data');
+                    const previewImg = document.getElementById('prod-photo-preview');
+                    const placeholder = document.getElementById('prod-photo-placeholder');
+                    if (hiddenInput) hiddenInput.value = compressedDataUrl;
+                    if (previewImg) {
+                        previewImg.src = compressedDataUrl;
+                        previewImg.classList.remove('hidden');
+                    }
+                    if (placeholder) placeholder.classList.add('hidden');
+                    showToast('Photo ready & compressed for sync!');
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleProductImageUrlChange() {
+            const urlInput = document.getElementById('prod-image-url');
+            const previewImg = document.getElementById('prod-photo-preview');
+            const placeholder = document.getElementById('prod-photo-placeholder');
+            const val = urlInput ? urlInput.value.trim() : '';
+            if (val && previewImg) {
+                previewImg.src = val;
+                previewImg.classList.remove('hidden');
+                if (placeholder) placeholder.classList.add('hidden');
+            }
+        }
+
+        function openProductModal(productId = '') {
+            const modal = document.getElementById('product-modal');
+            const titleEl = document.getElementById('product-modal-title');
+            const idEl = document.getElementById('prod-id');
+            const nameEl = document.getElementById('prod-name');
+            const barcodeEl = document.getElementById('prod-barcode');
+            const priceEl = document.getElementById('prod-price');
+            const costEl = document.getElementById('prod-cost');
+            const lowStockEl = document.getElementById('prod-low-stock');
+            const imgDataEl = document.getElementById('prod-image-data');
+            const imgUrlEl = document.getElementById('prod-image-url');
+            const previewImg = document.getElementById('prod-photo-preview');
+            const placeholder = document.getElementById('prod-photo-placeholder');
+            const delBtn = document.getElementById('prod-delete-btn');
+            const fileEl = document.getElementById('prod-photo-file');
+            if (!modal) return;
+
+            if (fileEl) fileEl.value = '';
+            const prod = productId ? (state.products || []).find(p => p.id === productId) : null;
+
+            if (prod) {
+                if (titleEl) titleEl.textContent = 'Edit Product';
+                if (idEl) idEl.value = prod.id;
+                if (nameEl) nameEl.value = prod.name || '';
+                if (barcodeEl) barcodeEl.value = prod.barcode || '';
+                if (priceEl) priceEl.value = prod.price ?? '';
+                if (costEl) costEl.value = prod.cost ?? '';
+                if (lowStockEl) lowStockEl.value = prod.lowStockThreshold ?? '';
+                if (imgDataEl) imgDataEl.value = prod.imageData || '';
+                if (imgUrlEl) imgUrlEl.value = prod.imageUrl || '';
+                const currentImg = prod.imageData || prod.imageUrl || '';
+                if (previewImg && placeholder) {
+                    if (currentImg) {
+                        previewImg.src = currentImg;
+                        previewImg.classList.remove('hidden');
+                        placeholder.classList.add('hidden');
+                    } else {
+                        previewImg.src = '';
+                        previewImg.classList.add('hidden');
+                        placeholder.classList.remove('hidden');
+                    }
+                }
+                if (delBtn) delBtn.classList.remove('hidden');
+            } else {
+                if (titleEl) titleEl.textContent = 'Add Product';
+                if (idEl) idEl.value = '';
+                if (nameEl) nameEl.value = '';
+                if (barcodeEl) barcodeEl.value = '';
+                if (priceEl) priceEl.value = '';
+                if (costEl) costEl.value = '';
+                if (lowStockEl) lowStockEl.value = '';
+                if (imgDataEl) imgDataEl.value = '';
+                if (imgUrlEl) imgUrlEl.value = '';
+                if (previewImg) {
+                    previewImg.src = '';
+                    previewImg.classList.add('hidden');
+                }
+                if (placeholder) placeholder.classList.remove('hidden');
+                if (delBtn) delBtn.classList.add('hidden');
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeProductModal() {
+            const modal = document.getElementById('product-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function saveProduct(e) {
+            e.preventDefault();
+            const idVal = (document.getElementById('prod-id')?.value || '').trim();
+            const nameVal = (document.getElementById('prod-name')?.value || '').trim();
+            const barcodeVal = (document.getElementById('prod-barcode')?.value || '').trim();
+            const priceVal = Math.max(0, parseFloat(document.getElementById('prod-price')?.value || '0') || 0);
+            const costVal = Math.max(0, parseFloat(document.getElementById('prod-cost')?.value || '0') || 0);
+            const lowRaw = (document.getElementById('prod-low-stock')?.value || '').trim();
+            const lowStockVal = lowRaw === '' ? undefined : Math.max(0, parseInt(lowRaw, 10) || 0);
+            const imageDataVal = (document.getElementById('prod-image-data')?.value || '').trim();
+            const imageUrlVal = (document.getElementById('prod-image-url')?.value || '').trim();
+
+            if (!nameVal) {
+                showToast('Please enter product name.');
+                return;
+            }
+
+            if (idVal) {
+                const idx = (state.products || []).findIndex(p => p.id === idVal);
+                if (idx !== -1) {
+                    state.products[idx] = {
+                        ...state.products[idx],
+                        name: nameVal,
+                        barcode: barcodeVal,
+                        price: priceVal,
+                        cost: costVal,
+                        lowStockThreshold: lowStockVal,
+                        imageData: imageDataVal,
+                        imageUrl: imageUrlVal
+                    };
+                }
+            } else {
+                const newId = 'prod_' + Date.now();
+                state.products.unshift({
+                    id: newId,
+                    name: nameVal,
+                    category: state.selectedCategory && state.selectedCategory !== 'All' ? state.selectedCategory : 'Drinks',
+                    barcode: barcodeVal,
+                    stock: 0,
+                    price: priceVal,
+                    cost: costVal,
+                    lowStockThreshold: lowStockVal,
+                    imageData: imageDataVal,
+                    imageUrl: imageUrlVal
+                });
+            }
+
+            saveState();
+            broadcastTransactionSync(false);
+            closeProductModal();
+            renderAll();
+            showToast('Product saved & synced!');
+        }
+
         function updateSyncStatusPill() {
             const dot = document.getElementById('sync-dot');
             const label = document.getElementById('sync-label');
             const autoToggle = document.getElementById('auto-sync-toggle');
             const roomInput = document.getElementById('sync-room-input');
+            const endpointInput = document.getElementById('sync-endpoint-input');
+            const apiKeyInput = document.getElementById('sync-apikey-input');
             const statusText = document.getElementById('sync-device-status');
 
             const active = state.autoSyncEnabled !== false;
             const roomCode = (state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase();
+            const hasCustomCloud = Boolean(String(state.syncEndpointUrl || '').trim());
 
             if (dot) {
                 dot.className = `w-2 h-2 rounded-full ${active ? 'bg-emerald-500' : 'bg-amber-500'}`;
             }
             if (label) {
                 label.textContent = active
-                    ? `Auto Sync • ${roomCode}`
+                    ? `Auto Sync • ${roomCode}${hasCustomCloud ? ' (Cloud)' : ''}`
                     : 'Local Only';
             }
             if (autoToggle) autoToggle.checked = active;
             if (roomInput && document.activeElement !== roomInput) roomInput.value = roomCode;
+            if (endpointInput && document.activeElement !== endpointInput) endpointInput.value = state.syncEndpointUrl || '';
+            if (apiKeyInput && document.activeElement !== apiKeyInput) apiKeyInput.value = state.syncApiKey || '';
             if (statusText) {
                 statusText.textContent = state.lastSyncedAt
-                    ? `Room: ${roomCode} • Last synced: ${state.lastSyncedAt}`
+                    ? `Room: ${roomCode} • ${hasCustomCloud ? 'Custom Cloud' : 'Shared Room'} • Last synced: ${state.lastSyncedAt}`
                     : `Use the same Room Code (${roomCode}) on other devices or transfer via Sync File.`;
             }
         }
@@ -1665,9 +2059,15 @@
             saveState();
         }
 
-        function syncTransactionsNow() {
-            pullRoomTransactionsIfNewer();
-            broadcastTransactionSync(true);
+        function updateSyncEndpointUrl(val) {
+            state.syncEndpointUrl = String(val || '').trim();
+            saveState();
+            updateSyncStatusPill();
+        }
+
+        function updateSyncApiKey(val) {
+            state.syncApiKey = String(val || '').trim();
+            saveState();
         }
 
         function initTransactionSyncListeners() {
