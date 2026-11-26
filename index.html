@@ -152,10 +152,16 @@
             <h1 id="header-store-name" class="text-lg sm:text-xl font-extrabold tracking-tight text-cafe-text truncate max-w-[60%]">
                 Sari-Sari
             </h1>
-            <button type="button" onclick="openStockAlertsModal()" aria-label="Stock Alerts" title="Stock Alerts" class="relative w-10 h-10 rounded-full flex items-center justify-center text-cafe-text hover:bg-black/5 tap-scale text-lg">
-                🔔
-                <span id="top-alert-badge" class="hidden absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-cafe-red text-white text-[10px] font-extrabold flex items-center justify-center tabular-nums">0</span>
-            </button>
+            <div class="flex items-center gap-1">
+                <button type="button" onclick="openCartModal()" aria-label="Open Cart" title="Open Cart" class="relative w-10 h-10 rounded-full flex items-center justify-center text-cafe-text hover:bg-black/5 tap-scale text-lg">
+                    🛒
+                    <span id="top-cart-badge" class="hidden absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full adaptive-bg-primary text-white text-[10px] font-extrabold flex items-center justify-center tabular-nums">0</span>
+                </button>
+                <button type="button" onclick="openStockAlertsModal()" aria-label="Stock Alerts" title="Stock Alerts" class="relative w-10 h-10 rounded-full flex items-center justify-center text-cafe-text hover:bg-black/5 tap-scale text-lg">
+                    🔔
+                    <span id="top-alert-badge" class="hidden absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-cafe-red text-white text-[10px] font-extrabold flex items-center justify-center tabular-nums">0</span>
+                </button>
+            </div>
         </div>
 
         <!-- ==================== MODAL: CONFIRM DELETE GCASH ENTRY ==================== -->
@@ -539,7 +545,7 @@
                 </div>
                 <div>
                     <label class="block text-[11px] font-bold text-cafe-muted mb-1">Category (Optional — auto-creates filter)</label>
-                    <input id="prod-category" list="existing-categories-datalist" type="text" placeholder="e.g., Drinks, Snacks, Cigarettes..." class="w-full bg-cafe-bg border border-cafe-border rounded-xl px-3.5 py-2 text-xs text-cafe-text focus:outline-none focus:border-cafe-espresso">
+                    <input id="prod-category" list="existing-categories-datalist" type="text" onbeforeinput="handleProductCategoryBeforeInput(event, this)" oninput="handleProductCategoryInput(this)" onkeyup="handleProductCategoryInput(this)" onblur="handleProductCategoryInput(this)" placeholder="e.g., Drinks, Snacks, Cigarettes..." class="w-full bg-cafe-bg border border-cafe-border rounded-xl px-3.5 py-2 text-xs text-cafe-text focus:outline-none focus:border-cafe-espresso">
                     <datalist id="existing-categories-datalist"></datalist>
                 </div>
                 <div>
@@ -1375,71 +1381,6 @@
             });
         }
 
-        async function pushCloudRoomTransactions(roomCode) {
-            const cleanRoom = String(roomCode || state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase() || 'SARI-SYNC-DEFAULT';
-            const key = getCloudRoomKey(cleanRoom);
-            const payload = {
-                roomCode: cleanRoom,
-                updatedAt: Date.now(),
-                bundle: getCompactSyncBundle()
-            };
-            const rawJson = JSON.stringify(payload);
-            const encoded = encodeURIComponent(rawJson);
-
-            // Guard against overly huge URLs that public key-value endpoints may reject
-            if (encoded.length > 65000) {
-                return false;
-            }
-
-            const primaryUrl = `${CLOUD_SYNC_ENDPOINTS[0]}${key}/${encoded}`;
-            try {
-                const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-                const timer = controller ? setTimeout(() => controller.abort(), 6000) : null;
-                const res = await fetch(primaryUrl, {
-                    method: 'POST',
-                    mode: 'cors',
-                    signal: controller ? controller.signal : undefined
-                });
-                if (timer) clearTimeout(timer);
-                if (res && res.ok) return true;
-            } catch (e) {}
-
-            // Retry once via XHR fallback
-            const xhrOk = await sendRoomPayloadViaXHR(primaryUrl, 6000);
-            if (xhrOk) return true;
-
-            return await sendRoomPayloadViaXHR(primaryUrl, 7000);
-        }
-
-        async function pullCloudRoomTransactions(roomCode) {
-            const cleanRoom = String(roomCode || state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase() || 'SARI-SYNC-DEFAULT';
-            const key = getCloudRoomKey(cleanRoom);
-            const getUrl = `https://keyvalue.immanuel.co/api/KeyVal/GetValue/${key}`;
-            try {
-                const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-                const timer = controller ? setTimeout(() => controller.abort(), 6000) : null;
-                const res = await fetch(getUrl, {
-                    method: 'GET',
-                    mode: 'cors',
-                    signal: controller ? controller.signal : undefined
-                });
-                if (timer) clearTimeout(timer);
-                if (!res.ok) return false;
-                const txt = await res.text();
-                if (!txt) return false;
-                const cleanTxt = txt.replace(/^"|"$/g, '').replace(/\\"/g, '"');
-                const parsed = JSON.parse(cleanTxt);
-                if (parsed && parsed.bundle) {
-                    const changed = applyIncomingTransactionBundle(parsed.bundle, parsed.roomCode || cleanRoom);
-                    if (changed) {
-                        renderAll();
-                    }
-                    return true;
-                }
-            } catch (e) {}
-            return false;
-        }
-
         function getRoomSyncStorageKey(roomCode) {
             const clean = String(roomCode || state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase() || 'SARI-SYNC-DEFAULT';
             return `sari_sari_tx_room_${clean}`;
@@ -1936,9 +1877,73 @@
             const clean = String(cat || '').trim();
             if (!clean) return;
             if (!Array.isArray(state.categories)) state.categories = [];
-            if (!state.categories.includes(clean)) {
+            const existingMatch = state.categories.find(c => String(c).toLowerCase() === clean.toLowerCase());
+            if (!existingMatch) {
                 state.categories.push(clean);
             }
+        }
+
+        function resolveCanonicalCategory(cat) {
+            const clean = String(cat || '').trim();
+            if (!clean) return '';
+            const firstCategory = String((state.categories && state.categories[0]) || '').trim();
+            if (firstCategory && firstCategory.toLowerCase() === clean.toLowerCase()) {
+                return firstCategory;
+            }
+            const knownCats = Array.from(new Set([
+                ...(state.categories || []),
+                ...(state.products || []).map(p => (p.category || '').trim()).filter(Boolean)
+            ]));
+            const matched = knownCats.find(c => String(c).toLowerCase() === clean.toLowerCase());
+            return matched || clean;
+        }
+
+        function applyDetectedCategoryToInput(inputEl, candidateValue) {
+            if (!inputEl) return;
+            const rawVal = String(candidateValue !== undefined ? candidateValue : inputEl.value);
+            const trimmed = rawVal.trim();
+            if (!trimmed) return;
+            const canonical = resolveCanonicalCategory(trimmed);
+            if (!canonical) return;
+            const trailingSpace = /\s$/.test(rawVal) ? ' ' : '';
+            const nextVal = canonical + trailingSpace;
+            if (inputEl.value !== nextVal) {
+                inputEl.value = nextVal;
+                const endPos = inputEl.value.length;
+                if (typeof inputEl.setSelectionRange === 'function') {
+                    try {
+                        inputEl.setSelectionRange(endPos, endPos);
+                    } catch (e) {}
+                }
+            }
+        }
+
+        function handleProductCategoryBeforeInput(event, inputEl) {
+            if (!event || !inputEl) return;
+            if (event.inputType && event.inputType.startsWith('delete')) return;
+            const inserted = typeof event.data === 'string' ? event.data : '';
+            const start = typeof inputEl.selectionStart === 'number' ? inputEl.selectionStart : inputEl.value.length;
+            const end = typeof inputEl.selectionEnd === 'number' ? inputEl.selectionEnd : inputEl.value.length;
+            const predicted = inputEl.value.slice(0, start) + inserted + inputEl.value.slice(end);
+            const trimmed = predicted.trim();
+            if (!trimmed) return;
+            const canonical = resolveCanonicalCategory(trimmed);
+            if (canonical && canonical.toLowerCase() === trimmed.toLowerCase() && predicted.trim() !== canonical) {
+                event.preventDefault();
+                const trailingSpace = /\s$/.test(predicted) ? ' ' : '';
+                inputEl.value = canonical + trailingSpace;
+                const endPos = inputEl.value.length;
+                if (typeof inputEl.setSelectionRange === 'function') {
+                    try {
+                        inputEl.setSelectionRange(endPos, endPos);
+                    } catch (e) {}
+                }
+            }
+        }
+
+        function handleProductCategoryInput(inputEl) {
+            if (!inputEl) return;
+            applyDetectedCategoryToInput(inputEl, inputEl.value);
         }
 
         function buildProductIllustrationDataUrl(prod) {
@@ -2088,7 +2093,8 @@
             e.preventDefault();
             const idVal = (document.getElementById('prod-id')?.value || '').trim();
             const nameVal = (document.getElementById('prod-name')?.value || '').trim();
-            const catVal = (document.getElementById('prod-category')?.value || '').trim();
+            const rawCatVal = (document.getElementById('prod-category')?.value || '').trim();
+            const catVal = resolveCanonicalCategory(rawCatVal);
             const barcodeVal = (document.getElementById('prod-barcode')?.value || '').trim();
             const stockVal = Math.max(0, parseInt(document.getElementById('prod-stock')?.value || '0', 10) || 0);
             const priceVal = Math.max(0, parseFloat(document.getElementById('prod-price')?.value || '0') || 0);
@@ -2101,6 +2107,10 @@
             if (!nameVal) {
                 showToast('Please enter product name.');
                 return;
+            }
+
+            if (catVal) {
+                ensureCategorySaved(catVal);
             }
 
             if (idVal) {
