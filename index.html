@@ -490,18 +490,6 @@
                 </div>
                 <div class="grid grid-cols-2 gap-2.5">
                     <div>
-                        <label class="block text-[11px] font-bold text-cafe-muted mb-1">Category *</label>
-                        <input id="prod-category" type="text" list="category-suggestions" oninput="renderModalCategoryChips()" required placeholder="e.g., Drinks" class="w-full bg-cafe-bg border border-cafe-border rounded-xl px-3 py-2 text-xs text-cafe-text focus:outline-none focus:border-cafe-espresso">
-                        <datalist id="category-suggestions"></datalist>
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-bold text-cafe-muted mb-1">Initial / Current Stock *</label>
-                        <input id="prod-stock" type="number" min="0" required placeholder="0" class="w-full bg-cafe-bg border border-cafe-border rounded-xl px-3 py-2 text-xs text-cafe-text focus:outline-none focus:border-cafe-espresso">
-                    </div>
-                </div>
-                <div id="prod-category-chips" class="flex flex-wrap gap-1.5"></div>
-                <div class="grid grid-cols-2 gap-2.5">
-                    <div>
                         <label class="block text-[11px] font-bold text-cafe-muted mb-1">Selling Price (₱) *</label>
                         <input id="prod-price" type="number" step="0.01" min="0" required placeholder="0.00" class="w-full bg-cafe-bg border border-cafe-border rounded-xl px-3 py-2 text-xs text-cafe-text focus:outline-none focus:border-cafe-espresso">
                     </div>
@@ -698,7 +686,19 @@
                         Sync Now
                     </button>
                 </div>
-                <p id="sync-device-status" class="text-[10px] text-cafe-muted tabular-nums">Transactions synced across tabs &amp; paired room.</p>
+                <div class="flex items-center gap-1.5">
+                    <button type="button" onclick="copySyncCodeForOtherDevice()" class="px-2.5 py-1 rounded-lg bg-white border border-cafe-border text-[10px] font-extrabold text-cafe-text tap-scale">
+                        Copy Room Code
+                    </button>
+                    <button type="button" onclick="exportTransactionSyncBundle()" class="px-2.5 py-1 rounded-lg bg-white border border-cafe-border text-[10px] font-extrabold text-cafe-text tap-scale">
+                        Export Sync File
+                    </button>
+                    <label class="px-2.5 py-1 rounded-lg bg-white border border-cafe-border text-[10px] font-extrabold text-cafe-text cursor-pointer tap-scale">
+                        Import Sync File
+                        <input type="file" accept=".json,application/json" onchange="importTransactionSyncBundle(event)" class="hidden">
+                    </label>
+                </div>
+                <p id="sync-device-status" class="text-[10px] text-cafe-muted tabular-nums">Use the same Room Code on other devices or transfer via Sync File.</p>
             </div>
             <div class="flex justify-end">
                 <button type="button" onclick="closeCloudModal()" class="px-4 py-2 rounded-full bg-cafe-espresso text-white text-xs font-extrabold tap-scale">
@@ -1064,6 +1064,309 @@
         let memoryFallbackStorage = null;
         let syncBroadcastChannel = null;
         let autoSyncInterval = null;
+        let activeBarcodeTarget = 'pos';
+        let barcodeStream = null;
+        let barcodeScanTimer = null;
+        const CLOUD_SYNC_ENDPOINTS = [
+            'https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/',
+            'https://kvdb.io/'
+        ];
+
+        function getCloudRoomKey(roomCode) {
+            const clean = String(roomCode || state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase() || 'SARI-SYNC-DEFAULT';
+            return `SARISARI_${clean.replace(/[^A-Z0-9_-]/g, '_')}`;
+        }
+
+        async function pushCloudRoomTransactions(roomCode) {
+            const cleanRoom = String(roomCode || state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase() || 'SARI-SYNC-DEFAULT';
+            const key = getCloudRoomKey(cleanRoom);
+            const payload = {
+                roomCode: cleanRoom,
+                updatedAt: Date.now(),
+                bundle: getTransactionBundle()
+            };
+            const encoded = encodeURIComponent(JSON.stringify(payload));
+            try {
+                await fetch(`${CLOUD_SYNC_ENDPOINTS[0]}${key}/${encoded}`, { method: 'POST', mode: 'cors' });
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        async function pullCloudRoomTransactions(roomCode) {
+            const cleanRoom = String(roomCode || state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase() || 'SARI-SYNC-DEFAULT';
+            const key = getCloudRoomKey(cleanRoom);
+            try {
+                const res = await fetch(`https://keyvalue.immanuel.co/api/KeyVal/GetValue/${key}`, { method: 'GET', mode: 'cors' });
+                if (!res.ok) return false;
+                const txt = await res.text();
+                if (!txt) return false;
+                const cleanTxt = txt.replace(/^"|"$/g, '').replace(/\\"/g, '"');
+                const parsed = JSON.parse(cleanTxt);
+                if (parsed && parsed.bundle) {
+                    const changed = applyIncomingTransactionBundle(parsed.bundle, parsed.roomCode || cleanRoom);
+                    if (changed) {
+                        renderAll();
+                    }
+                    return true;
+                }
+            } catch (e) {}
+            return false;
+        }
+
+        function getRoomSyncStorageKey(roomCode) {
+            const clean = String(roomCode || state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase() || 'SARI-SYNC-DEFAULT';
+            return `sari_sari_tx_room_${clean}`;
+        }
+
+        function broadcastTransactionSync(showFeedback = false) {
+            try {
+                const roomCode = String(state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase() || 'SARI-SYNC-DEFAULT';
+                const payload = {
+                    type: 'TX_AUTO_SYNC',
+                    roomCode,
+                    sentAt: Date.now(),
+                    bundle: getTransactionBundle()
+                };
+                try {
+                    localStorage.setItem(getRoomSyncStorageKey(roomCode), JSON.stringify(payload));
+                } catch (e) {}
+                if (syncBroadcastChannel) {
+                    syncBroadcastChannel.postMessage(payload);
+                }
+                pushCloudRoomTransactions(roomCode).catch(() => {});
+                state.lastSyncedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                writeStorageSafe(STORAGE_KEY, JSON.stringify(state));
+                updateSyncStatusPill();
+                if (showFeedback) {
+                    showToast(`Synced transactions (${roomCode})`);
+                }
+            } catch (err) {
+                if (showFeedback) showToast('Sync completed locally.');
+            }
+        }
+
+        function pullRoomTransactionsIfNewer() {
+            try {
+                const roomCode = String(state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase() || 'SARI-SYNC-DEFAULT';
+                const raw = localStorage.getItem(getRoomSyncStorageKey(roomCode));
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && parsed.bundle) {
+                        const changed = applyIncomingTransactionBundle(parsed.bundle, parsed.roomCode);
+                        if (changed) {
+                            renderAll();
+                        }
+                    }
+                }
+                pullCloudRoomTransactions(roomCode).then(() => updateSyncStatusPill()).catch(() => updateSyncStatusPill());
+                updateSyncStatusPill();
+            } catch (err) {
+                updateSyncStatusPill();
+            }
+        }
+
+        function copySyncCodeForOtherDevice() {
+            const roomCode = String(state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase() || 'SARI-SYNC-DEFAULT';
+            const inp = document.getElementById('sync-room-input');
+            if (inp) {
+                inp.value = roomCode;
+                inp.select();
+            }
+            try {
+                document.execCommand('copy');
+            } catch (e) {}
+            showToast(`Copied Room Code: ${roomCode}`);
+        }
+
+        function exportTransactionSyncBundle() {
+            try {
+                const roomCode = String(state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase() || 'SARI-SYNC-DEFAULT';
+                const bundleData = {
+                    type: 'SARI_SARI_TX_SYNC_BUNDLE',
+                    roomCode,
+                    exportedAt: new Date().toISOString(),
+                    bundle: getTransactionBundle()
+                };
+                const blob = new Blob([JSON.stringify(bundleData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `sari-sari-tx-sync-${roomCode}-${todayISO()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('Transaction Sync File exported!');
+            } catch (err) {
+                showToast('Could not export Sync File.');
+            }
+        }
+
+        function importTransactionSyncBundle(e) {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (ev) {
+                try {
+                    const parsed = JSON.parse(ev.target.result);
+                    const incoming = parsed && parsed.bundle ? parsed.bundle : parsed;
+                    if (!incoming || typeof incoming !== 'object') {
+                        showToast('Invalid Sync File.');
+                        return;
+                    }
+                    applyIncomingTransactionBundle(incoming, parsed.roomCode || state.syncRoomCode);
+                    broadcastTransactionSync(false);
+                    renderAll();
+                    showToast('Transactions synced from file!');
+                } catch (err) {
+                    showToast('Error importing Sync File.');
+                } finally {
+                    e.target.value = '';
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function triggerResetToDefault(source) {
+            const btnId = source === 'modal' ? 'reset-default-btn-modal' : 'reset-default-btn';
+            const btn = document.getElementById(btnId);
+            if (btn && btn.dataset.confirming !== '1') {
+                btn.dataset.confirming = '1';
+                const prevText = btn.textContent;
+                btn.textContent = 'Tap Again to Reset';
+                clearTimeout(resetConfirmTimer);
+                resetConfirmTimer = setTimeout(() => {
+                    btn.dataset.confirming = '';
+                    btn.textContent = prevText;
+                }, 3000);
+                return;
+            }
+            if (btn) {
+                btn.dataset.confirming = '';
+                btn.textContent = 'Reset Default';
+            }
+            state = defaultState();
+            saveState();
+            renderAll();
+            showToast('Reset to default catalog.');
+        }
+
+        function loadStarterCatalog() {
+            const existingIds = new Set((state.products || []).map(p => p.id));
+            const existingNames = new Set((state.products || []).map(p => (p.name || '').toLowerCase()));
+            let added = 0;
+            FULL_SARI_SARI_CATALOG.forEach(item => {
+                if (!existingIds.has(item.id) && !existingNames.has(item.name.toLowerCase())) {
+                    state.products.push({ ...item, stock: 0 });
+                    added++;
+                }
+            });
+            state.categories = Array.from(new Set((state.products || []).map(p => p.category).filter(Boolean)));
+            saveState();
+            renderAll();
+            showToast(added ? `Added ${added} items.` : 'All catalog items already loaded.');
+        }
+
+        function openBarcodeScannerModal(target = 'pos') {
+            activeBarcodeTarget = target;
+            const modal = document.getElementById('barcode-scanner-modal');
+            const sub = document.getElementById('barcode-scanner-subtitle');
+            const inp = document.getElementById('barcode-manual-input');
+            const fallback = document.getElementById('barcode-camera-fallback');
+            const reason = document.getElementById('barcode-fallback-reason');
+            if (!modal) return;
+            if (sub) sub.textContent = target === 'product' ? 'Scan barcode for product SKU' : 'Scan barcode to add item to order';
+            if (inp) inp.value = '';
+            if (fallback) fallback.classList.add('hidden');
+            if (reason) reason.textContent = 'Use a USB/Bluetooth scanner or enter barcode below.';
+            modal.classList.remove('hidden');
+            startCameraBarcodeScan();
+        }
+
+        function stopCameraBarcodeScan() {
+            clearInterval(barcodeScanTimer);
+            barcodeScanTimer = null;
+            if (barcodeStream) {
+                barcodeStream.getTracks().forEach(t => t.stop());
+                barcodeStream = null;
+            }
+            const video = document.getElementById('barcode-video');
+            if (video) video.srcObject = null;
+        }
+
+        function closeBarcodeScannerModal() {
+            stopCameraBarcodeScan();
+            const modal = document.getElementById('barcode-scanner-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        async function startCameraBarcodeScan() {
+            const video = document.getElementById('barcode-video');
+            const fallback = document.getElementById('barcode-camera-fallback');
+            const reason = document.getElementById('barcode-fallback-reason');
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                if (fallback) fallback.classList.remove('hidden');
+                if (reason) reason.textContent = 'Camera API not supported in this browser.';
+                return;
+            }
+            try {
+                barcodeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+                if (video) {
+                    video.srcObject = barcodeStream;
+                    await video.play();
+                }
+                if ('BarcodeDetector' in window) {
+                    const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'] });
+                    barcodeScanTimer = setInterval(async () => {
+                        if (!video || video.readyState < 2) return;
+                        try {
+                            const codes = await detector.detect(video);
+                            if (codes && codes.length && codes[0].rawValue) {
+                                handleScannedBarcode(String(codes[0].rawValue).trim());
+                            }
+                        } catch (e) {}
+                    }, 350);
+                } else {
+                    if (fallback) fallback.classList.remove('hidden');
+                    if (reason) reason.textContent = 'Live camera shown; type or scan code into box below.';
+                }
+            } catch (err) {
+                if (fallback) fallback.classList.remove('hidden');
+                if (reason) reason.textContent = 'Camera permission denied or unavailable. Enter code below.';
+            }
+        }
+
+        function handleScannedBarcode(code) {
+            const clean = String(code || '').trim();
+            if (!clean) return;
+            closeBarcodeScannerModal();
+            if (activeBarcodeTarget === 'product') {
+                const prodBarcodeInp = document.getElementById('prod-barcode');
+                if (prodBarcodeInp) prodBarcodeInp.value = clean;
+                showToast(`Barcode set: ${clean}`);
+                return;
+            }
+            const match = (state.products || []).find(p => String(p.barcode || '').trim().toLowerCase() === clean.toLowerCase());
+            if (match) {
+                addToCart(match.id);
+            } else {
+                const searchInp = document.getElementById('pos-search');
+                if (searchInp) {
+                    searchInp.value = clean;
+                    renderPOSGrid();
+                }
+                showToast(`No product with barcode ${clean}`);
+            }
+        }
+
+        function submitManualBarcode(e) {
+            e.preventDefault();
+            const inp = document.getElementById('barcode-manual-input');
+            if (!inp) return;
+            handleScannedBarcode(inp.value);
+        }
 
         function readStorageSafe(key) {
             try {
@@ -1210,283 +1513,13 @@
             return changed;
         }
 
-        function getRoomSyncStorageKey(roomCode) {
-            const clean = String(roomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '_');
-            return `sari_sari_tx_room_${clean || 'SARI_SYNC_DEFAULT'}`;
-        }
-
-        function broadcastTransactionSync(forceToast = false) {
-            if (!state.autoSyncEnabled && !forceToast) return;
-            const roomCode = (state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase();
-            state.syncRoomCode = roomCode;
-            state.lastSyncedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-            const payload = {
-                type: 'TX_AUTO_SYNC',
-                roomCode,
-                syncedAt: state.lastSyncedAt,
-                bundle: getTransactionBundle()
-            };
-
-            try {
-                localStorage.setItem(getRoomSyncStorageKey(roomCode), JSON.stringify(payload));
-            } catch (e) {}
-
-            try {
-                if (syncBroadcastChannel) {
-                    syncBroadcastChannel.postMessage(payload);
-                }
-            } catch (e) {}
-
-            updateSyncStatusPill();
-            if (forceToast) {
-                showToast(`Synced transactions (${roomCode}) at ${state.lastSyncedAt}`);
-            }
-        }
-
-        function pullRoomTransactionsIfNewer() {
-            if (!state.autoSyncEnabled) return;
-            const roomCode = (state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase();
-            try {
-                const raw = localStorage.getItem(getRoomSyncStorageKey(roomCode));
-                if (!raw) return;
-                const parsed = JSON.parse(raw);
-                if (parsed && parsed.bundle) {
-                    const changed = applyIncomingTransactionBundle(parsed.bundle, parsed.roomCode || roomCode);
-                    if (changed) {
-                        renderAll();
-                    } else {
-                        updateSyncStatusPill();
-                    }
-                }
-            } catch (e) {}
-        }
-
-        function initTransactionSyncListeners() {
-            try {
-                if ('BroadcastChannel' in window) {
-                    syncBroadcastChannel = new BroadcastChannel('sari_sari_pos_tx_sync');
-                    syncBroadcastChannel.onmessage = (ev) => {
-                        const data = ev && ev.data;
-                        if (!data || data.type !== 'TX_AUTO_SYNC') return;
-                        if (!state.autoSyncEnabled) return;
-                        const changed = applyIncomingTransactionBundle(data.bundle, data.roomCode);
-                        if (changed) {
-                            renderAll();
-                            showToast('New transaction synced from other device/tab');
-                        } else {
-                            updateSyncStatusPill();
-                        }
-                    };
-                }
-            } catch (e) {}
-
-            window.addEventListener('storage', (ev) => {
-                if (!ev || !ev.key || !state.autoSyncEnabled) return;
-                const roomKey = getRoomSyncStorageKey(state.syncRoomCode);
-                if (ev.key === roomKey && ev.newValue) {
-                    try {
-                        const parsed = JSON.parse(ev.newValue);
-                        const changed = applyIncomingTransactionBundle(parsed.bundle, parsed.roomCode);
-                        if (changed) {
-                            renderAll();
-                            showToast('Transactions synced automatically');
-                        }
-                    } catch (e) {}
-                } else if (ev.key === STORAGE_KEY && ev.newValue) {
-                    loadState();
-                    renderAll();
-                }
-            });
-
-            clearInterval(autoSyncInterval);
-            autoSyncInterval = setInterval(() => {
-                if (state.autoSyncEnabled) {
-                    pullRoomTransactionsIfNewer();
-                    broadcastTransactionSync(false);
-                }
-            }, 6000);
-        }
-
-        function updateSyncStatusPill() {
-            const dot = document.getElementById('sync-dot');
-            const label = document.getElementById('sync-label');
-            const statusEl = document.getElementById('sync-device-status');
-            const toggleEl = document.getElementById('auto-sync-toggle');
-            const roomInput = document.getElementById('sync-room-input');
-
-            if (toggleEl) toggleEl.checked = state.autoSyncEnabled !== false;
-            if (roomInput && document.activeElement !== roomInput) {
-                roomInput.value = state.syncRoomCode || 'SARI-SYNC-DEFAULT';
-            }
-
-            if (state.autoSyncEnabled !== false) {
-                if (dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
-                if (label) {
-                    label.textContent = state.lastSyncedAt
-                        ? `Auto Sync • ${state.lastSyncedAt}`
-                        : `Auto Sync (${state.syncRoomCode || 'SARI-SYNC-DEFAULT'})`;
-                }
-                if (statusEl) {
-                    statusEl.textContent = `Room: ${state.syncRoomCode || 'SARI-SYNC-DEFAULT'} • Syncs sales, utang, expenses & GCash${state.lastSyncedAt ? ` • Last: ${state.lastSyncedAt}` : ''}`;
-                }
-            } else {
-                if (dot) dot.className = 'w-2 h-2 rounded-full bg-amber-500';
-                if (label) label.textContent = 'Auto Sync Off';
-                if (statusEl) statusEl.textContent = 'Auto sync is paused. Turn on Auto Sync to sync transactions.';
-            }
-        }
-
-        function toggleAutoSync(enabled) {
-            state.autoSyncEnabled = Boolean(enabled);
-            saveState();
-            updateSyncStatusPill();
-            if (state.autoSyncEnabled) {
-                broadcastTransactionSync(true);
-            } else {
-                showToast('Automatic transaction sync paused');
-            }
-        }
-
-        function updateSyncRoomCode(val) {
-            state.syncRoomCode = String(val || '').trim().toUpperCase() || 'SARI-SYNC-DEFAULT';
-            saveState();
-            updateSyncStatusPill();
-        }
-
-        function syncTransactionsNow() {
-            pullRoomTransactionsIfNewer();
-            broadcastTransactionSync(true);
-        }
-
         function saveState() {
             try {
-                const ok = writeStorageSafe(STORAGE_KEY, JSON.stringify(state));
-                if (!ok && !saveState._warned) {
-                    saveState._warned = true;
-                    showToast('Browser storage full—using session memory. Export JSON to back up.');
-                }
-                if (state.autoSyncEnabled !== false) {
-                    broadcastTransactionSync(false);
-                } else {
-                    updateSyncStatusPill();
-                }
+                writeStorageSafe(STORAGE_KEY, JSON.stringify(state));
+                updateSyncStatusPill();
             } catch (err) {
-                console.error('Failed to save state:', err);
-                showToast('Storage warning: image or data too large.');
+                console.error('saveState error:', err);
             }
-        }
-
-        function formatPHP(val) {
-            const num = Number(val) || 0;
-            return '₱' + num.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-
-        function escapeHtml(str) {
-            return String(str ?? '')
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
-
-        function escapeJsSingle(str) {
-            return String(str ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-        }
-
-        function buildProductIllustrationDataUrl(item) {
-            try {
-                const name = String(item?.name || 'Product');
-                const cat = String(item?.category || '').toLowerCase();
-                const lower = name.toLowerCase();
-
-                let bgStart = '#F8FAFC', bgEnd = '#E2E8F0', accent = '#4A2C18', badgeText = 'ITEM';
-                if (lower.includes('coke') || lower.includes('coca-cola') || lower.includes('sting') || lower.includes('cobra')) {
-                    bgStart = '#FEE2E2'; bgEnd = '#FECACA'; accent = '#DC2626'; badgeText = 'DRINK';
-                } else if (lower.includes('sprite') || lower.includes('c2') || lower.includes('milo') || lower.includes('birch') || lower.includes('leaf')) {
-                    bgStart = '#DCFCE7'; bgEnd = '#BBF7D0'; accent = '#15803D'; badgeText = 'DRINK';
-                } else if (lower.includes('royal') || lower.includes('tang') || lower.includes('zest-o') || lower.includes('mango')) {
-                    bgStart = '#FFEDD5'; bgEnd = '#FED7AA'; accent = '#EA580C'; badgeText = 'JUICE';
-                } else if (lower.includes('mineral') || lower.includes('water') || lower.includes('gatorade') || lower.includes('wilkins')) {
-                    bgStart = '#E0F2FE'; bgEnd = '#BAE6FD'; accent = '#0284C7'; badgeText = 'WATER';
-                } else if (cat.includes('coffee') || lower.includes('kopiko') || lower.includes('nescafe') || lower.includes('great taste') || lower.includes('chuckie')) {
-                    bgStart = '#F5EBE0'; bgEnd = '#E6CCB2'; accent = '#4A2C18'; badgeText = 'COFFEE/MILK';
-                } else if (cat.includes('noodle') || lower.includes('canton') || lower.includes('mami') || lower.includes('bihon')) {
-                    bgStart = '#FEF9C3'; bgEnd = '#FEF08A'; accent = '#CA8A04'; badgeText = 'NOODLES';
-                } else if (cat.includes('canned') || lower.includes('sardines') || lower.includes('corned') || lower.includes('tuna') || lower.includes('meatloaf')) {
-                    bgStart = '#FEE2E2'; bgEnd = '#FCA5A5'; accent = '#B91C1C'; badgeText = 'CANNED';
-                } else if (cat.includes('biscuit') || cat.includes('snack') || lower.includes('piattos') || lower.includes('nova') || lower.includes('skyflakes') || lower.includes('chippy')) {
-                    bgStart = '#DBEAFE'; bgEnd = '#BFDBFE'; accent = '#2563EB'; badgeText = 'SNACK';
-                } else if (cat.includes('rice') || cat.includes('cooking') || lower.includes('rice') || lower.includes('bigas') || lower.includes('oil') || lower.includes('mantika') || lower.includes('egg') || lower.includes('itlog')) {
-                    bgStart = '#FEF3C7'; bgEnd = '#FDE68A'; accent = '#B45309'; badgeText = 'PANTRY';
-                } else if (cat.includes('toiletries') || cat.includes('laundry') || lower.includes('soap') || lower.includes('shampoo') || lower.includes('tide') || lower.includes('diaper')) {
-                    bgStart = '#E0F2FE'; bgEnd = '#CFFAFE'; accent = '#0369A1'; badgeText = 'CARE';
-                } else if (cat.includes('medicine') || cat.includes('household') || lower.includes('battery')) {
-                    bgStart = '#DCFCE7'; bgEnd = '#D1FAE5'; accent = '#15803D'; badgeText = 'HOUSEHOLD';
-                }
-
-                const shortLabel = name.replace(/\(.*?\)/g, '').trim().slice(0, 18);
-                const subLabel = name.match(/\(([^)]+)\)/)?.[1]?.slice(0, 14) || item?.category || 'Sari-Sari';
-
-                let shapeSvg = '';
-                if (lower.includes('bottle') || lower.includes('mismo') || lower.includes('kasalo') || lower.includes('water') || lower.includes('gatorade') || lower.includes('cobra') || lower.includes('oil') || lower.includes('mantika')) {
-                    shapeSvg = `
-                        <rect x="152" y="64" width="96" height="32" rx="8" fill="${accent}"/>
-                        <path d="M164 96 L236 96 L256 144 L256 320 Q256 340 236 340 L164 340 Q144 340 144 320 L144 144 Z" fill="#FFFFFF" stroke="${accent}" stroke-width="8"/>
-                        <rect x="152" y="176" width="96" height="96" rx="14" fill="${accent}"/>
-                        <text x="200" y="218" text-anchor="middle" fill="#FFFFFF" font-family="Inter,Arial,sans-serif" font-size="22" font-weight="800">${escapeHtml(badgeText)}</text>
-                        <text x="200" y="246" text-anchor="middle" fill="#FEF08A" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="700">${escapeHtml(subLabel)}</text>
-                    `;
-                } else if (cat.includes('canned') || lower.includes('can') || lower.includes('evap') || lower.includes('condensada')) {
-                    shapeSvg = `
-                        <ellipse cx="200" cy="112" rx="76" ry="22" fill="#E2E8F0" stroke="${accent}" stroke-width="6"/>
-                        <rect x="124" y="112" width="152" height="196" fill="#FFFFFF" stroke="${accent}" stroke-width="6"/>
-                        <rect x="130" y="142" width="140" height="132" rx="12" fill="${accent}"/>
-                        <ellipse cx="200" cy="308" rx="76" ry="22" fill="#CBD5E1" stroke="${accent}" stroke-width="6"/>
-                        <text x="200" y="200" text-anchor="middle" fill="#FFFFFF" font-family="Inter,Arial,sans-serif" font-size="22" font-weight="800">${escapeHtml(badgeText)}</text>
-                        <text x="200" y="232" text-anchor="middle" fill="#FDE68A" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="700">${escapeHtml(subLabel)}</text>
-                    `;
-                } else if (lower.includes('egg') || lower.includes('itlog')) {
-                    shapeSvg = `
-                        <path d="M200 78 C255 145 278 220 278 268 C278 318 242 346 200 346 C158 346 122 318 122 268 C122 220 145 145 200 78 Z" fill="#FFFBEB" stroke="${accent}" stroke-width="8"/>
-                        <ellipse cx="200" cy="252" rx="48" ry="38" fill="#F59E0B" opacity="0.22"/>
-                        <text x="200" y="256" text-anchor="middle" fill="${accent}" font-family="Inter,Arial,sans-serif" font-size="22" font-weight="800">EGG</text>
-                        <text x="200" y="282" text-anchor="middle" fill="#78350F" font-family="Inter,Arial,sans-serif" font-size="15" font-weight="700">${escapeHtml(subLabel)}</text>
-                    `;
-                } else {
-                    shapeSvg = `
-                        <path d="M116 96 L284 96 L272 122 L284 148 L272 174 L284 200 L272 226 L284 252 L272 278 L284 304 L272 330 L128 330 L116 304 L128 278 L116 252 L128 226 L116 200 L128 174 L116 148 L128 122 Z" fill="#FFFFFF" stroke="${accent}" stroke-width="7"/>
-                        <rect x="134" y="132" width="132" height="162" rx="16" fill="${accent}"/>
-                        <text x="200" y="202" text-anchor="middle" fill="#FFFFFF" font-family="Inter,Arial,sans-serif" font-size="22" font-weight="800">${escapeHtml(badgeText)}</text>
-                        <text x="200" y="234" text-anchor="middle" fill="#FEF08A" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="700">${escapeHtml(subLabel)}</text>
-                    `;
-                }
-
-                const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
-                    <defs>
-                        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0%" stop-color="${bgStart}"/>
-                            <stop offset="100%" stop-color="${bgEnd}"/>
-                        </linearGradient>
-                    </defs>
-                    <rect width="400" height="400" rx="36" fill="url(#g)"/>
-                    ${shapeSvg}
-                    <rect x="28" y="348" width="344" height="34" rx="17" fill="#1C1410" opacity="0.86"/>
-                    <text x="200" y="370" text-anchor="middle" fill="#FFFFFF" font-family="Inter,Arial,sans-serif" font-size="14" font-weight="700">${escapeHtml(shortLabel)}</text>
-                </svg>`;
-
-                return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-            } catch (e) {
-                return '';
-            }
-        }
-
-        function getProductVisualSrc(item) {
-            if (!item) return '';
-            if (item.imageData) return item.imageData;
-            if (item.imageUrl) return item.imageUrl;
-            return buildProductIllustrationDataUrl(item);
         }
 
         function todayISO() {
@@ -1497,532 +1530,683 @@
             return `${year}-${month}-${day}`;
         }
 
+        function formatPeso(val) {
+            const num = Number(val) || 0;
+            return '₱' + num.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
         function showToast(msg) {
             const box = document.getElementById('toast-box');
             if (!box) return;
             box.textContent = msg;
             box.classList.remove('hidden');
-            clearTimeout(box._timer);
-            box._timer = setTimeout(() => {
+            clearTimeout(box._toastTimer);
+            box._toastTimer = setTimeout(() => {
                 box.classList.add('hidden');
-            }, 2400);
+            }, 2600);
         }
 
-        function ensureCategorySaved(catName) {
-            const clean = String(catName || '').trim();
+        function ensureCategorySaved(cat) {
+            const clean = String(cat || '').trim();
             if (!clean) return;
-            const exists = state.categories.some(c => c.toLowerCase() === clean.toLowerCase());
-            if (!exists) {
+            if (!Array.isArray(state.categories)) state.categories = [];
+            if (!state.categories.includes(clean)) {
                 state.categories.push(clean);
             }
         }
 
-        function isProductLowStock(p) {
-            const stock = Number(p.stock) || 0;
-            const rawThreshold = p.lowStockThreshold;
-            if (rawThreshold === null || rawThreshold === undefined || rawThreshold === '') return false;
-            const threshold = Number(rawThreshold);
-            if (isNaN(threshold) || threshold <= 0) return false;
-            return stock > 0 && stock <= threshold;
+        function buildProductIllustrationDataUrl(prod) {
+            const label = String((prod && prod.name) || 'Item').slice(0, 14).replace(/[<>&"]/g, '');
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect width="200" height="200" rx="24" fill="#EFE7DE"/><text x="100" y="106" text-anchor="middle" font-family="Inter, sans-serif" font-size="16" font-weight="700" fill="#4A2C18">${label}</text></svg>`;
+            return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
         }
 
-        function isProductAlerted(p) {
-            const stock = Number(p.stock) || 0;
-            return stock <= 0 || isProductLowStock(p);
-        }
+        function updateSyncStatusPill() {
+            const dot = document.getElementById('sync-dot');
+            const label = document.getElementById('sync-label');
+            const autoToggle = document.getElementById('auto-sync-toggle');
+            const roomInput = document.getElementById('sync-room-input');
+            const statusText = document.getElementById('sync-device-status');
 
-        // ==================== ADAPTIVE COLOR ENGINE ====================
-        function extractColorFromImage(src, callback) {
-            if (!src) {
-                callback('#363E18', '#262B16');
-                return;
+            const active = state.autoSyncEnabled !== false;
+            const roomCode = (state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase();
+
+            if (dot) {
+                dot.className = `w-2 h-2 rounded-full ${active ? 'bg-emerald-500' : 'bg-amber-500'}`;
             }
-            const img = new Image();
-            img.crossOrigin = 'Anonymous';
-            img.onload = function () {
+            if (label) {
+                label.textContent = active
+                    ? `Auto Sync • ${roomCode}`
+                    : 'Local Only';
+            }
+            if (autoToggle) autoToggle.checked = active;
+            if (roomInput && document.activeElement !== roomInput) roomInput.value = roomCode;
+            if (statusText) {
+                statusText.textContent = state.lastSyncedAt
+                    ? `Room: ${roomCode} • Last synced: ${state.lastSyncedAt}`
+                    : `Use the same Room Code (${roomCode}) on other devices or transfer via Sync File.`;
+            }
+        }
+
+        function toggleAutoSync(checked) {
+            state.autoSyncEnabled = Boolean(checked);
+            saveState();
+            if (state.autoSyncEnabled) {
+                pullRoomTransactionsIfNewer();
+                broadcastTransactionSync(true);
+            } else {
+                showToast('Auto Sync paused (Local Only).');
+            }
+        }
+
+        function updateSyncRoomCode(val) {
+            const clean = String(val || '').trim().toUpperCase() || 'SARI-SYNC-DEFAULT';
+            state.syncRoomCode = clean;
+            saveState();
+        }
+
+        function syncTransactionsNow() {
+            pullRoomTransactionsIfNewer();
+            broadcastTransactionSync(true);
+        }
+
+        function initTransactionSyncListeners() {
+            try {
+                if ('BroadcastChannel' in window) {
+                    syncBroadcastChannel = new BroadcastChannel('sari_sari_tx_sync_channel');
+                    syncBroadcastChannel.onmessage = (event) => {
+                        const msg = event && event.data;
+                        if (msg && msg.type === 'TX_AUTO_SYNC' && msg.bundle) {
+                            const changed = applyIncomingTransactionBundle(msg.bundle, msg.roomCode);
+                            if (changed) {
+                                renderAll();
+                            } else {
+                                updateSyncStatusPill();
+                            }
+                        }
+                    };
+                }
+            } catch (e) {}
+
+            window.addEventListener('storage', (event) => {
+                if (!event || !event.key) return;
+                const roomKey = getRoomSyncStorageKey(state.syncRoomCode);
+                if (event.key === roomKey && event.newValue) {
+                    try {
+                        const parsed = JSON.parse(event.newValue);
+                        if (parsed && parsed.bundle) {
+                            const changed = applyIncomingTransactionBundle(parsed.bundle, parsed.roomCode);
+                            if (changed) renderAll();
+                            else updateSyncStatusPill();
+                        }
+                    } catch (e) {}
+                }
+            });
+
+            clearInterval(autoSyncInterval);
+            autoSyncInterval = setInterval(() => {
+                if (document.hidden || state.autoSyncEnabled === false) return;
+                pullRoomTransactionsIfNewer();
+            }, 8000);
+        }
+
+        function getSoldQtyMap() {
+            const map = {};
+            (state.sales || []).forEach(sale => {
+                if (!sale || sale.voided) return;
+                (sale.items || []).forEach(item => {
+                    if (!item || !item.productId) return;
+                    map[item.productId] = (map[item.productId] || 0) + (Number(item.qty) || 0);
+                });
+            });
+            return map;
+        }
+
+        function updateHeaderStoreName() {
+            const h1 = document.getElementById('header-store-name');
+            if (h1) h1.textContent = state.storeName || 'Sari-Sari';
+            const inp1 = document.getElementById('store-name-input');
+            if (inp1 && document.activeElement !== inp1) inp1.value = state.storeName || '';
+            const inp2 = document.getElementById('modal-store-name-input');
+            if (inp2 && document.activeElement !== inp2) inp2.value = state.storeName || '';
+        }
+
+        function saveStoreName() {
+            const inp = document.getElementById('store-name-input');
+            if (!inp) return;
+            state.storeName = inp.value.trim() || 'Sari-Sari Store';
+            saveState();
+            updateHeaderStoreName();
+            showToast('Store name saved!');
+        }
+
+        function saveStoreNameFromModal() {
+            const inp = document.getElementById('modal-store-name-input');
+            if (!inp) return;
+            state.storeName = inp.value.trim() || 'Sari-Sari Store';
+            saveState();
+            updateHeaderStoreName();
+            showToast('Store name saved!');
+        }
+
+        function openStoreSettingsModal() {
+            const m = document.getElementById('store-settings-modal');
+            if (m) m.classList.remove('hidden');
+            updateHeaderStoreName();
+        }
+
+        function closeStoreSettingsModal() {
+            const m = document.getElementById('store-settings-modal');
+            if (m) m.classList.add('hidden');
+        }
+
+        function openCloudModal() {
+            const m = document.getElementById('cloud-modal');
+            if (m) m.classList.remove('hidden');
+            updateSyncStatusPill();
+        }
+
+        function closeCloudModal() {
+            const m = document.getElementById('cloud-modal');
+            if (m) m.classList.add('hidden');
+        }
+
+        function exportBackupJSON() {
+            try {
+                const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `sari-sari-backup-${todayISO()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('Backup JSON exported!');
+            } catch (err) {
+                showToast('Could not export JSON.');
+            }
+        }
+
+        function importBackupJSON(e) {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (ev) {
                 try {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    canvas.width = 24;
-                    canvas.height = 24;
-                    ctx.drawImage(img, 0, 0, 24, 24);
-                    const data = ctx.getImageData(0, 0, 24, 24).data;
-                    let r = 0, g = 0, b = 0, count = 0;
-                    for (let i = 0; i < data.length; i += 4) {
-                        const alpha = data[i + 3];
-                        if (alpha < 128) continue;
-                        const pr = data[i], pg = data[i + 1], pb = data[i + 2];
-                        if (pr > 240 && pg > 240 && pb > 240) continue;
-                        r += pr;
-                        g += pg;
-                        b += pb;
-                        count++;
-                    }
-                    if (count === 0) {
-                        callback('#363E18', '#262B16');
+                    const parsed = JSON.parse(ev.target.result);
+                    if (!parsed || typeof parsed !== 'object') {
+                        showToast('Invalid backup JSON.');
                         return;
                     }
-                    r = Math.max(25, Math.min(175, Math.round((r / count) * 0.72)));
-                    g = Math.max(25, Math.min(175, Math.round((g / count) * 0.72)));
-                    b = Math.max(25, Math.min(175, Math.round((b / count) * 0.72)));
-                    const primary = `rgb(${r}, ${g}, ${b})`;
-                    const dark = `rgb(${Math.max(15, Math.round(r * 0.68))}, ${Math.max(15, Math.round(g * 0.68))}, ${Math.max(15, Math.round(b * 0.68))})`;
-                    callback(primary, dark);
-                } catch (e) {
-                    callback('#363E18', '#262B16');
+                    state = { ...defaultState(), ...parsed };
+                    saveState();
+                    renderAll();
+                    showToast('Backup restored!');
+                } catch (err) {
+                    showToast('Error importing JSON.');
+                } finally {
+                    e.target.value = '';
                 }
             };
-            img.onerror = function () {
-                callback('#363E18', '#262B16');
-            };
-            img.src = src;
+            reader.readAsText(file);
         }
 
-        function applyAdaptiveAccentColor(primary, dark) {
-            state.adaptiveAccent = primary || '#363E18';
-            state.adaptiveAccentDark = dark || '#262B16';
-
-            const banner = document.getElementById('pos-hero-banner');
-            if (banner) {
-                banner.style.background = `linear-gradient(125deg, ${state.adaptiveAccentDark} 0%, ${state.adaptiveAccent} 68%, ${state.adaptiveAccentDark} 100%)`;
-            }
-
-            const topCartBadge = document.getElementById('top-cart-badge');
-            if (topCartBadge) topCartBadge.style.backgroundColor = state.adaptiveAccent;
-
-            const floatBtn = document.querySelector('#floating-cart-bar button');
-            if (floatBtn) floatBtn.style.backgroundColor = state.adaptiveAccent;
-
-            const floatBadge = document.getElementById('float-cart-badge');
-            if (floatBadge) floatBadge.style.color = state.adaptiveAccent;
-
-            document.querySelectorAll('.adaptive-primary-btn').forEach(el => {
-                el.style.backgroundColor = state.adaptiveAccent;
-                el.style.borderColor = state.adaptiveAccent;
-                el.style.color = '#FFFFFF';
-            });
-
-            updateNavStyles();
-        }
-
-        // ==================== NAVIGATION & TABS ====================
         function switchTab(tabName) {
-            state.activeTab = tabName;
-            const tabs = ['pos', 'stock', 'utang', 'gcash', 'reports'];
-            tabs.forEach(t => {
+            const validTabs = ['pos', 'stock', 'utang', 'gcash', 'reports'];
+            const nextTab = validTabs.includes(tabName) ? tabName : 'pos';
+            state.activeTab = nextTab;
+            writeStorageSafe(STORAGE_KEY, JSON.stringify(state));
+
+            validTabs.forEach(t => {
                 const sec = document.getElementById(`tab-${t}`);
-                if (sec) sec.classList.toggle('hidden', t !== tabName);
-            });
-            updateNavStyles();
-            saveState();
-            renderAll();
-        }
+                if (sec) sec.classList.toggle('hidden', t !== nextTab);
 
-        function updateNavStyles() {
-            const tabs = ['pos', 'stock', 'utang', 'gcash', 'reports'];
-            const accent = state.adaptiveAccent || '#363E18';
-
-            tabs.forEach(t => {
-                const isActive = state.activeTab === t;
                 const deskBtn = document.getElementById(`desk-nav-${t}`);
                 if (deskBtn) {
-                    if (isActive) {
-                        deskBtn.style.backgroundColor = accent;
-                        deskBtn.style.color = '#FFFFFF';
-                        deskBtn.classList.add('font-extrabold');
-                        deskBtn.classList.remove('text-cafe-muted', 'font-bold');
-                    } else {
-                        deskBtn.style.backgroundColor = '';
-                        deskBtn.style.color = '';
-                        deskBtn.classList.remove('font-extrabold');
-                        deskBtn.classList.add('text-cafe-muted', 'font-bold');
-                    }
+                    deskBtn.className = t === nextTab
+                        ? 'px-4 py-1.5 rounded-full text-xs font-extrabold bg-[#363E18] text-white transition'
+                        : 'px-4 py-1.5 rounded-full text-xs font-bold text-cafe-muted hover:text-cafe-text transition';
                 }
 
                 const mobBtn = document.getElementById(`mob-nav-${t}`);
                 if (mobBtn) {
-                    if (isActive) {
-                        mobBtn.style.backgroundColor = accent;
-                        mobBtn.style.color = '#FFFFFF';
-                        mobBtn.classList.add('nav-tab-floating', 'font-extrabold');
-                        mobBtn.classList.remove('text-cafe-muted', 'font-semibold');
-                    } else {
-                        mobBtn.style.backgroundColor = '';
-                        mobBtn.style.color = '';
-                        mobBtn.classList.remove('nav-tab-floating', 'font-extrabold');
-                        mobBtn.classList.add('text-cafe-muted', 'font-semibold');
-                    }
-                }
-            });
-        }
-
-        // ==================== POS & BEST-SELLER BANNER ====================
-        function getSalesMetricsByProduct() {
-            const metrics = {};
-            (state.sales || []).forEach((s, saleIdx) => {
-                const saleTime = new Date(s.date || 0).getTime() || (state.sales.length - saleIdx);
-                (s.items || []).forEach(it => {
-                    const pid = it.productId;
-                    if (!pid) return;
-                    if (!metrics[pid]) {
-                        metrics[pid] = { qty: 0, revenue: 0, lastSaleTime: 0 };
-                    }
-                    const q = Number(it.qty) || 0;
-                    const sub = Number(it.subtotal) || (q * (Number(it.price) || 0));
-                    metrics[pid].qty += q;
-                    metrics[pid].revenue += sub;
-                    if (saleTime > metrics[pid].lastSaleTime) {
-                        metrics[pid].lastSaleTime = saleTime;
-                    }
-                });
-            });
-            return metrics;
-        }
-
-        function getSortedProductsForPOS(metricsMap = null) {
-            const metrics = metricsMap || getSalesMetricsByProduct();
-            return [...state.products].sort((a, b) => {
-                const ma = metrics[a.id] || { qty: 0, revenue: 0, lastSaleTime: 0 };
-                const mb = metrics[b.id] || { qty: 0, revenue: 0, lastSaleTime: 0 };
-                if (mb.qty !== ma.qty) return mb.qty - ma.qty;
-                if (mb.revenue !== ma.revenue) return mb.revenue - ma.revenue;
-                if (mb.lastSaleTime !== ma.lastSaleTime) return mb.lastSaleTime - ma.lastSaleTime;
-                return (a.name || '').localeCompare(b.name || '');
-            });
-        }
-
-        function renderHeroBanner() {
-            const titleEl = document.getElementById('hero-bestseller-title');
-            const subEl = document.getElementById('hero-bestseller-sub');
-            const chipsEl = document.getElementById('hero-bestseller-chips');
-            const thumbEl = document.getElementById('hero-bestseller-thumb');
-            const bgEl = document.getElementById('hero-bestseller-bg');
-            const actionEl = document.getElementById('hero-bestseller-action');
-            if (!titleEl || !subEl || !chipsEl || !thumbEl || !actionEl) return;
-            const metrics = getSalesMetricsByProduct();
-            const sorted = getSortedProductsForPOS(metrics);
-            const featured = sorted[0];
-
-            if (!featured) {
-                titleEl.textContent = 'BEST SELLER PRODUCT';
-                subEl.textContent = 'Tap + Add Product to start selling';
-                chipsEl.innerHTML = '';
-                thumbEl.innerHTML = '🔥';
-                if (bgEl) bgEl.classList.add('hidden');
-                actionEl.innerHTML = `<button type="button" onclick="openProductModal()" class="px-4 py-2 rounded-full bg-white text-cafe-espresso font-extrabold text-xs shadow-md hover:bg-amber-50 tap-scale">+ Add Product</button>`;
-                applyAdaptiveAccentColor('#363E18', '#262B16');
-                return;
-            }
-
-            const soldCounts = {};
-            state.sales.forEach(s => {
-                (s.items || []).forEach(it => {
-                    soldCounts[it.productId] = (soldCounts[it.productId] || 0) + (Number(it.qty) || 0);
-                });
-            });
-            const soldQty = (metrics[featured.id] && metrics[featured.id].qty) || 0;
-            const imgSrc = getProductVisualSrc(featured);
-
-            titleEl.textContent = featured.name;
-            subEl.textContent = `${formatPHP(featured.price)} • ${featured.stock} in stock`;
-            chipsEl.innerHTML = `
-                <span class="px-2.5 py-0.5 rounded-full bg-white/15 text-[10px] font-extrabold uppercase tracking-wider">${escapeHtml(featured.category || 'Item')}</span>
-                <span class="px-2.5 py-0.5 rounded-full bg-amber-300/20 text-amber-200 text-[10px] font-extrabold">${soldQty} Sold</span>
-            `;
-
-            if (imgSrc) {
-                thumbEl.innerHTML = `<img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(featured.name)}" decoding="async" onerror="handleImgError(this, '${escapeJsSingle(featured.id)}')" class="w-full h-full object-contain">`;
-                if (bgEl) {
-                    bgEl.style.backgroundImage = `url('${imgSrc.replace(/'/g, "\\'")}')`;
-                    bgEl.classList.remove('hidden');
-                }
-                extractColorFromImage(imgSrc, (p, d) => applyAdaptiveAccentColor(p, d));
-            } else {
-                thumbEl.innerHTML = '🏪';
-                if (bgEl) bgEl.classList.add('hidden');
-                applyAdaptiveAccentColor('#363E18', '#262B16');
-            }
-
-            const outOfStock = Number(featured.stock) <= 0;
-            actionEl.innerHTML = outOfStock
-                ? `<button type="button" onclick="openProductModal('${escapeJsSingle(featured.id)}')" class="px-4 py-2 rounded-full bg-white/90 text-cafe-red font-extrabold text-xs shadow-md tap-scale">Restock</button>`
-                : `<button type="button" onclick="addToCart('${escapeJsSingle(featured.id)}')" class="px-4 py-2 rounded-full bg-white text-cafe-espresso font-extrabold text-xs shadow-md hover:bg-amber-50 tap-scale">+ Add</button>`;
-        }
-
-        function renderPOSCategories() {
-            const container = document.getElementById('pos-category-pills');
-            if (!container) return;
-
-            const dynamicCats = new Set();
-            state.products.forEach(p => {
-                if (p && p.category && String(p.category).trim()) {
-                    dynamicCats.add(String(p.category).trim());
+                    mobBtn.className = t === nextTab
+                        ? 'nav-tab-item nav-tab-floating flex flex-col items-center py-1 px-2 rounded-xl bg-[#363E18] text-white font-extrabold'
+                        : 'nav-tab-item flex flex-col items-center py-1 rounded-xl text-cafe-muted font-semibold';
                 }
             });
 
-            state.categories = Array.from(dynamicCats);
+            renderAll();
+        }
 
-            if (state.categories.length === 0) {
-                state.selectedCategory = 'All';
-                container.innerHTML = '';
-                container.classList.add('hidden');
-                return;
+        function renderHeroAndCategories() {
+            const soldMap = getSoldQtyMap();
+            const products = state.products || [];
+            const sorted = [...products].sort((a, b) => (soldMap[b.id] || 0) - (soldMap[a.id] || 0));
+            const topProd = sorted[0] || products[0];
+
+            const heroTitle = document.getElementById('hero-bestseller-title');
+            const heroSub = document.getElementById('hero-bestseller-sub');
+            const heroThumb = document.getElementById('hero-bestseller-thumb');
+            const heroChips = document.getElementById('hero-bestseller-chips');
+
+            if (topProd) {
+                if (heroTitle) heroTitle.textContent = topProd.name;
+                if (heroSub) {
+                    const soldCount = soldMap[topProd.id] || 0;
+                    heroSub.textContent = `${formatPeso(topProd.price)} • Stock: ${Number(topProd.stock) || 0} pcs • Sold: ${soldCount}`;
+                }
+                if (heroThumb) {
+                    const imgSrc = topProd.imageData || topProd.imageUrl || buildProductIllustrationDataUrl(topProd);
+                    heroThumb.innerHTML = `<img src="${imgSrc}" alt="${topProd.name}" onerror="handleImgError(this, '${topProd.id}')" class="w-full h-full object-cover">`;
+                }
             }
 
-            container.classList.remove('hidden');
-            const cats = ['All', ...state.categories];
-            if (!cats.includes(state.selectedCategory)) {
-                state.selectedCategory = 'All';
+            if (heroChips) {
+                const lowCount = products.filter(p => typeof p.lowStockThreshold === 'number' && p.lowStockThreshold >= 0 && (Number(p.stock) || 0) > 0 && (Number(p.stock) || 0) <= p.lowStockThreshold).length;
+                const outCount = products.filter(p => (Number(p.stock) || 0) <= 0).length;
+                heroChips.innerHTML = `
+                    <span class="px-2.5 py-0.5 rounded-full bg-white/15 text-[10px] font-bold">${products.length} Items</span>
+                    <span class="px-2.5 py-0.5 rounded-full bg-amber-400/25 text-amber-100 text-[10px] font-bold">${lowCount} Low Stock</span>
+                    <span class="px-2.5 py-0.5 rounded-full bg-red-500/30 text-red-100 text-[10px] font-bold">${outCount} Out</span>
+                `;
             }
 
-            const accent = state.adaptiveAccent || '#363E18';
-            container.innerHTML = cats.map(cat => {
-                const active = state.selectedCategory === cat;
-                const styleAttr = active ? `style="background-color:${accent};border-color:${accent};color:#FFFFFF;"` : '';
-                const cls = active
-                    ? 'border-transparent text-white'
-                    : 'bg-white text-cafe-text border-cafe-border hover:border-cafe-espresso/50';
-                return `<button type="button" onclick="selectPOSCategory('${escapeJsSingle(cat)}')" ${styleAttr} class="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold border transition tap-scale ${cls}">${escapeHtml(cat)}</button>`;
-            }).join('');
+            const pillsContainer = document.getElementById('pos-category-pills');
+            if (pillsContainer) {
+                const cats = ['All', ...(state.categories || [])];
+                pillsContainer.innerHTML = cats.map(cat => {
+                    const active = (state.selectedCategory || 'All') === cat;
+                    return `<button type="button" onclick="selectPOSCategory('${cat.replace(/'/g, "\\'")}')" class="shrink-0 px-3.5 py-2 rounded-full text-xs font-extrabold tap-scale ${active ? 'bg-[#363E18] text-white shadow-sm' : 'bg-white text-cafe-text border border-cafe-border'}">${cat}</button>`;
+                }).join('');
+            }
         }
 
         function selectPOSCategory(cat) {
-            state.selectedCategory = cat;
-            renderPOSCategories();
+            state.selectedCategory = cat || 'All';
+            renderHeroAndCategories();
             renderPOSGrid();
         }
 
         function clearPOSSearch() {
-            const input = document.getElementById('pos-search');
-            if (input) input.value = '';
+            const inp = document.getElementById('pos-search');
+            if (inp) inp.value = '';
+            const btn = document.getElementById('pos-clear-search');
+            if (btn) btn.classList.add('hidden');
             renderPOSGrid();
         }
 
         function renderPOSGrid() {
             const grid = document.getElementById('pos-product-grid');
-            const searchInput = document.getElementById('pos-search');
-            const clearBtn = document.getElementById('pos-clear-search');
             if (!grid) return;
 
-            const q = (searchInput ? searchInput.value : '').trim().toLowerCase();
-            if (clearBtn) clearBtn.classList.toggle('hidden', q.length === 0);
+            const searchEl = document.getElementById('pos-search');
+            const clearBtn = document.getElementById('pos-clear-search');
+            const query = String((searchEl && searchEl.value) || '').trim().toLowerCase();
+            if (clearBtn) clearBtn.classList.toggle('hidden', !query);
 
-            const salesMetrics = getSalesMetricsByProduct();
-            let items = getSortedProductsForPOS(salesMetrics);
+            const soldMap = getSoldQtyMap();
+            let list = [...(state.products || [])];
+
             if (state.selectedCategory && state.selectedCategory !== 'All') {
-                items = items.filter(p => (p.category || '').toLowerCase() === state.selectedCategory.toLowerCase());
+                list = list.filter(p => (p.category || '') === state.selectedCategory);
             }
-            if (q) {
-                items = items.filter(p =>
-                    (p.name || '').toLowerCase().includes(q) ||
-                    (p.category || '').toLowerCase().includes(q)
+            if (query) {
+                list = list.filter(p =>
+                    String(p.name || '').toLowerCase().includes(query) ||
+                    String(p.category || '').toLowerCase().includes(query) ||
+                    String(p.barcode || '').toLowerCase().includes(query)
                 );
             }
 
-            if (items.length === 0) {
-                grid.innerHTML = `
-                    <div class="col-span-full bg-white rounded-3xl border border-cafe-border p-8 text-center space-y-2.5 shadow-cafe">
-                        <p class="text-sm font-extrabold text-cafe-text">${state.products.length === 0 ? 'No products yet' : 'No matching products'}</p>
-                        <p class="text-xs text-cafe-muted">${state.products.length === 0 ? 'Add your first sari-sari item to start selling.' : 'Try another search keyword or category.'}</p>
-                        <button type="button" onclick="openProductModal()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-cafe-espresso text-white text-xs font-extrabold shadow-cafe tap-scale">
-                            + Add Product
+            list.sort((a, b) => (soldMap[b.id] || 0) - (soldMap[a.id] || 0));
+            const displayList = query ? list.slice(0, 60) : list.slice(0, 48);
+
+            if (!displayList.length) {
+                grid.innerHTML = `<div class="col-span-full bg-white rounded-2xl border border-cafe-border p-6 text-center text-xs text-cafe-muted">No matching products found.</div>`;
+                return;
+            }
+
+            grid.innerHTML = displayList.map(prod => {
+                const stock = Number(prod.stock) || 0;
+                const out = stock <= 0;
+                const imgSrc = prod.imageData || prod.imageUrl || buildProductIllustrationDataUrl(prod);
+                return `
+                    <div class="virtual-card-item bg-white rounded-2xl border border-cafe-border shadow-cafe p-3 flex flex-col justify-between gap-2.5 relative">
+                        <button type="button" onclick="openProductModal('${prod.id}')" aria-label="Edit ${prod.name}" class="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-white/90 border border-cafe-border text-cafe-text text-xs font-extrabold flex items-center justify-center shadow-sm hover:bg-cafe-bg tap-scale">✎</button>
+                        <div onclick="addToCart('${prod.id}')" class="cursor-pointer space-y-2">
+                            <div class="w-full h-28 rounded-xl bg-cafe-bg overflow-hidden flex items-center justify-center">
+                                <img src="${imgSrc}" alt="${prod.name}" loading="lazy" onerror="handleImgError(this, '${prod.id}')" class="w-full h-full object-cover">
+                            </div>
+                            <div>
+                                <p class="text-xs font-extrabold text-cafe-text line-clamp-2 leading-snug pr-5">${prod.name}</p>
+                                <div class="flex items-center justify-between mt-1">
+                                    <span class="text-sm font-extrabold text-cafe-espresso tabular-nums">${formatPeso(prod.price)}</span>
+                                    <span class="text-[10px] font-bold ${out ? 'text-cafe-red' : 'text-cafe-muted'} tabular-nums">${out ? 'Out' : stock + ' left'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" onclick="addToCart('${prod.id}')" ${out ? 'disabled' : ''} class="w-full py-2 rounded-xl text-xs font-extrabold tap-scale ${out ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-[#363E18] text-white hover:bg-cafe-espressoDark'}">
+                            ${out ? 'Out of Stock' : '+ Add'}
                         </button>
                     </div>
                 `;
-                return;
-            }
-
-            const accent = state.adaptiveAccent || '#363E18';
-            grid.innerHTML = items.map(p => {
-                const imgSrc = getProductVisualSrc(p);
-                const stock = Number(p.stock) || 0;
-                const isOut = stock <= 0;
-                const isLow = isProductLowStock(p);
-                const inCart = state.cart.find(c => c.productId === p.id);
-                const cartQty = inCart ? inCart.qty : 0;
-                const soldQty = (salesMetrics[p.id] && salesMetrics[p.id].qty) || 0;
-
-                const stockBadge = isOut
-                    ? `<span class="px-2 py-0.5 rounded-full bg-cafe-redBg text-cafe-red text-[10px] font-extrabold">Out of stock</span>`
-                    : isLow
-                        ? `<span class="px-2 py-0.5 rounded-full bg-cafe-amberBg text-cafe-amber text-[10px] font-extrabold">${stock} left</span>`
-                        : `<span class="px-2 py-0.5 rounded-full bg-cafe-bg text-cafe-muted text-[10px] font-bold">${stock} stock</span>`;
-
-                return `
-                    <div data-prod-id="${escapeHtml(p.id)}"
-                         onpointerdown="startCardLongPress(event, '${escapeJsSingle(p.id)}')"
-                         onpointerup="cancelCardLongPress()"
-                         onpointerleave="cancelCardLongPress()"
-                         onpointercancel="cancelCardLongPress()"
-                         onclick="handlePOSCardTap(event, '${escapeJsSingle(p.id)}')"
-                         class="virtual-card-item group relative bg-white rounded-3xl border border-cafe-border shadow-cafe overflow-hidden flex flex-col justify-between cursor-pointer select-none tap-scale ${isOut ? 'opacity-75' : ''}">
-                        ${cartQty > 0 ? `<span style="background-color:${accent};" class="absolute top-2.5 right-2.5 z-10 min-w-[22px] h-[22px] px-1.5 rounded-full text-white text-[11px] font-extrabold flex items-center justify-center shadow tabular-nums">${cartQty}</span>` : ''}
-                        ${soldQty > 0 ? `<span class="absolute top-2.5 left-2.5 z-10 px-2 py-0.5 rounded-full bg-amber-100/95 text-cafe-amber border border-amber-200 text-[10px] font-extrabold shadow-xs tabular-nums">🔥 ${soldQty} sold</span>` : ''}
-                        <div class="w-full h-32 sm:h-36 bg-cafe-bg/70 flex items-center justify-center overflow-hidden p-2">
-                            ${imgSrc
-                                ? `<img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async" onerror="handleImgError(this, '${escapeJsSingle(p.id)}')" class="w-full h-full object-contain">`
-                                : `<span class="text-3xl">📦</span>`}
-                        </div>
-                        <div class="p-3 space-y-2 flex-1 flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between gap-1">
-                                    <span class="text-[10px] font-bold uppercase tracking-wider text-cafe-muted truncate">${escapeHtml(p.category || 'General')}</span>
-                                    <button type="button" onpointerdown="event.stopPropagation(); cancelCardLongPress();" onclick="event.preventDefault(); event.stopPropagation(); openProductModal('${escapeJsSingle(p.id)}')" title="Edit product" aria-label="Edit ${escapeHtml(p.name)}" class="text-xs font-bold text-cafe-muted hover:text-cafe-text px-1.5 py-0.5 rounded-lg hover:bg-cafe-bg">✎</button>
-                                </div>
-                                <h4 class="text-xs sm:text-sm font-extrabold text-cafe-text line-clamp-2 mt-0.5 leading-snug">${escapeHtml(p.name)}</h4>
-                            </div>
-                            <div class="flex items-center justify-between gap-1 pt-1">
-                                <div>
-                                    <p class="text-sm font-extrabold text-cafe-text tabular-nums">${formatPHP(p.price)}</p>
-                                    <div class="mt-0.5">${stockBadge}</div>
-                                </div>
-                                <button type="button"
-                                        onclick="event.stopPropagation(); ${isOut ? `openProductModal('${escapeJsSingle(p.id)}')` : `addToCart('${escapeJsSingle(p.id)}')`}"
-                                        style="${isOut ? '' : `background-color:${accent};`}"
-                                        class="px-3 py-1.5 rounded-full text-[11px] font-extrabold shadow-sm tap-scale ${isOut ? 'bg-cafe-redBg text-cafe-red' : 'text-white'}">
-                                    ${isOut ? 'Restock' : '+ Add'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
             }).join('');
         }
 
-        let longPressTimer = null;
-        let longPressTriggered = false;
-
-        function startCardLongPress(e, prodId) {
-            if (e.button && e.button !== 0) return;
-            if (e.target && e.target.closest && e.target.closest('button')) return;
-            longPressTriggered = false;
-            const card = e.currentTarget;
-            clearTimeout(longPressTimer);
-            longPressTimer = setTimeout(() => {
-                longPressTriggered = true;
-                if (card) card.classList.add('long-pressing');
-                setTimeout(() => {
-                    if (card) card.classList.remove('long-pressing');
-                    openProductModal(prodId);
-                }, 140);
-            }, 480);
-        }
-
-        function cancelCardLongPress() {
-            clearTimeout(longPressTimer);
-        }
-
-        function handlePOSCardTap(e, prodId) {
-            if (e.target && e.target.closest && e.target.closest('button')) return;
-            if (longPressTriggered) {
-                longPressTriggered = false;
+        function addToCart(productId) {
+            const prod = (state.products || []).find(p => p.id === productId);
+            if (!prod) return;
+            const stock = Number(prod.stock) || 0;
+            if (stock <= 0) {
+                showToast(`${prod.name} is out of stock.`);
                 return;
             }
-            addToCart(prodId);
+            const existing = (state.cart || []).find(c => c.productId === productId);
+            const currentQty = existing ? (Number(existing.qty) || 0) : 0;
+            if (currentQty + 1 > stock) {
+                showToast(`Only ${stock} left in stock.`);
+                return;
+            }
+            if (existing) {
+                existing.qty = currentQty + 1;
+            } else {
+                state.cart.push({
+                    productId: prod.id,
+                    name: prod.name,
+                    price: Number(prod.price) || 0,
+                    cost: Number(prod.cost) || 0,
+                    qty: 1
+                });
+            }
+            saveState();
+            renderCartUI();
+            showToast(`Added ${prod.name}`);
         }
 
-        // ==================== PRODUCT MODAL ====================
-        function getAllKnownCategories() {
-            const seen = new Map();
-            [...(state.categories || []), ...(state.products || []).map(p => p.category)].forEach(raw => {
-                const clean = String(raw || '').trim();
-                if (!clean) return;
-                const key = clean.toLowerCase();
-                if (!seen.has(key)) seen.set(key, clean);
+        function updateCartQty(productId, delta) {
+            const idx = (state.cart || []).findIndex(c => c.productId === productId);
+            if (idx === -1) return;
+            const prod = (state.products || []).find(p => p.id === productId);
+            const maxStock = prod ? (Number(prod.stock) || 0) : 999999;
+            const nextQty = (Number(state.cart[idx].qty) || 0) + delta;
+            if (nextQty <= 0) {
+                state.cart.splice(idx, 1);
+            } else if (nextQty > maxStock) {
+                showToast(`Max available stock is ${maxStock}.`);
+                return;
+            } else {
+                state.cart[idx].qty = nextQty;
+            }
+            saveState();
+            renderCartUI();
+        }
+
+        function clearCart() {
+            state.cart = [];
+            saveState();
+            renderCartUI();
+        }
+
+        function getCartTotals() {
+            let count = 0;
+            let total = 0;
+            (state.cart || []).forEach(item => {
+                const q = Number(item.qty) || 0;
+                const p = Number(item.price) || 0;
+                count += q;
+                total += q * p;
             });
-            return Array.from(seen.values());
+            return { count, total };
         }
 
-        function renderModalCategoryChips() {
-            const container = document.getElementById('prod-category-chips');
-            const input = document.getElementById('prod-category');
-            const datalist = document.getElementById('category-suggestions');
-            if (!container || !input) return;
-
-            const allCats = getAllKnownCategories();
-            if (datalist) {
-                datalist.innerHTML = allCats.map(c => `<option value="${escapeHtml(c)}">`).join('');
+        function renderCartUI() {
+            const { count, total } = getCartTotals();
+            const topBadge = document.getElementById('top-cart-badge');
+            if (topBadge) {
+                topBadge.textContent = count;
+                topBadge.classList.toggle('hidden', count <= 0);
             }
 
-            if (allCats.length === 0) {
-                container.innerHTML = '';
+            const floatBar = document.getElementById('floating-cart-bar');
+            const floatBadge = document.getElementById('float-cart-badge');
+            const floatTotal = document.getElementById('float-cart-total');
+            if (floatBar) floatBar.classList.toggle('hidden', count <= 0 || state.activeTab !== 'pos');
+            if (floatBadge) floatBadge.textContent = count;
+            if (floatTotal) floatTotal.textContent = formatPeso(total);
+
+            const deskCount = document.getElementById('desk-cart-count-label');
+            const deskItems = document.getElementById('desk-cart-items');
+            const deskTotal = document.getElementById('desk-cart-total');
+            if (deskCount) deskCount.textContent = `${count} ${count === 1 ? 'item' : 'items'}`;
+            if (deskTotal) deskTotal.textContent = formatPeso(total);
+            if (deskItems) {
+                if (!state.cart.length) {
+                    deskItems.innerHTML = `<p class="text-xs text-cafe-muted text-center py-8">Tap products on the left to build an order.</p>`;
+                } else {
+                    deskItems.innerHTML = state.cart.map(item => `
+                        <div class="flex items-center justify-between gap-2 bg-cafe-bg rounded-xl p-2 border border-cafe-border">
+                            <div class="min-w-0 flex-1">
+                                <p class="text-xs font-bold text-cafe-text truncate">${item.name}</p>
+                                <p class="text-[11px] text-cafe-muted tabular-nums">${formatPeso(item.price)} × ${item.qty}</p>
+                            </div>
+                            <div class="flex items-center gap-1 shrink-0">
+                                <button type="button" onclick="updateCartQty('${item.productId}', -1)" class="w-6 h-6 rounded-full bg-white border border-cafe-border text-xs font-extrabold">-</button>
+                                <span class="text-xs font-extrabold w-5 text-center tabular-nums">${item.qty}</span>
+                                <button type="button" onclick="updateCartQty('${item.productId}', 1)" class="w-6 h-6 rounded-full bg-white border border-cafe-border text-xs font-extrabold">+</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            const modalItems = document.getElementById('cart-modal-items');
+            const modalTotal = document.getElementById('cart-modal-total');
+            if (modalTotal) modalTotal.textContent = formatPeso(total);
+            if (modalItems) {
+                if (!state.cart.length) {
+                    modalItems.innerHTML = `<p class="text-xs text-cafe-muted text-center py-4">Your cart is empty.</p>`;
+                } else {
+                    modalItems.innerHTML = state.cart.map(item => `
+                        <div class="flex items-center justify-between gap-2 bg-cafe-bg rounded-xl p-2.5 border border-cafe-border">
+                            <div class="min-w-0 flex-1">
+                                <p class="text-xs font-bold text-cafe-text truncate">${item.name}</p>
+                                <p class="text-[11px] text-cafe-muted tabular-nums">${formatPeso(item.price)} each</p>
+                            </div>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <button type="button" onclick="updateCartQty('${item.productId}', -1)" class="w-6 h-6 rounded-full bg-white border border-cafe-border text-xs font-extrabold">-</button>
+                                <span class="text-xs font-extrabold w-5 text-center tabular-nums">${item.qty}</span>
+                                <button type="button" onclick="updateCartQty('${item.productId}', 1)" class="w-6 h-6 rounded-full bg-white border border-cafe-border text-xs font-extrabold">+</button>
+                                <span class="text-xs font-extrabold text-cafe-text ml-1 tabular-nums">${formatPeso((Number(item.price) || 0) * (Number(item.qty) || 0))}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+            updateCheckoutChange();
+        }
+
+        function openCartModal() {
+            const m = document.getElementById('cart-modal');
+            if (m) m.classList.remove('hidden');
+            renderCheckoutPaymentUI();
+            renderCartUI();
+        }
+
+        function closeCartModal() {
+            const m = document.getElementById('cart-modal');
+            if (m) m.classList.add('hidden');
+        }
+
+        function renderCheckoutPaymentUI() {
+            const container = document.getElementById('checkout-payment-buttons');
+            if (!container) return;
+            const opts = state.paymentOptions || ['Cash', 'GCash', 'Utang', 'Card'];
+            if (!opts.includes(state.checkoutPayment)) state.checkoutPayment = opts[0] || 'Cash';
+
+            container.innerHTML = opts.map(opt => {
+                const active = state.checkoutPayment === opt;
+                return `<button type="button" onclick="selectCheckoutPayment('${opt.replace(/'/g, "\\'")}')" class="py-2 px-3 rounded-xl text-xs font-extrabold tap-scale ${active ? 'bg-[#363E18] text-white' : 'bg-white text-cafe-text border border-cafe-border'}">${opt}</button>`;
+            }).join('');
+
+            const method = (state.checkoutPayment || 'Cash').toLowerCase();
+            const cashBox = document.getElementById('payment-cash-fields');
+            const gcashBox = document.getElementById('payment-gcash-fields');
+            const utangBox = document.getElementById('payment-utang-fields');
+            if (cashBox) cashBox.classList.toggle('hidden', method !== 'cash');
+            if (gcashBox) gcashBox.classList.toggle('hidden', method !== 'gcash');
+            if (utangBox) utangBox.classList.toggle('hidden', method !== 'utang');
+            updateCheckoutChange();
+        }
+
+        function selectCheckoutPayment(opt) {
+            state.checkoutPayment = opt;
+            renderCheckoutPaymentUI();
+        }
+
+        function addCustomPaymentOption() {
+            const inp = document.getElementById('new-payment-option-input');
+            if (!inp) return;
+            const val = inp.value.trim();
+            if (!val) return;
+            if (!state.paymentOptions.includes(val)) {
+                state.paymentOptions.push(val);
+            }
+            state.checkoutPayment = val;
+            inp.value = '';
+            saveState();
+            renderCheckoutPaymentUI();
+        }
+
+        function updateCheckoutChange() {
+            const { total } = getCartTotals();
+            const inp = document.getElementById('cash-tendered-input');
+            const disp = document.getElementById('checkout-change-display');
+            if (!inp || !disp) return;
+            const tendered = parseFloat(inp.value);
+            if (isNaN(tendered) || tendered < total) {
+                disp.textContent = '₱0.00';
                 return;
             }
-
-            const query = input.value.trim().toLowerCase();
-            const matches = query
-                ? allCats.filter(c => c.toLowerCase().includes(query))
-                : allCats;
-
-            const listToShow = matches.length > 0 ? matches : allCats;
-            const accent = state.adaptiveAccent || '#363E18';
-
-            container.innerHTML = listToShow.map(cat => {
-                const isExact = query && cat.toLowerCase() === query;
-                const styleAttr = isExact ? `style="background-color:${accent};border-color:${accent};color:#FFFFFF;"` : '';
-                const cls = isExact
-                    ? 'font-extrabold'
-                    : 'bg-cafe-bg text-cafe-text border-cafe-border hover:border-cafe-espresso font-bold';
-                return `<button type="button" onclick="selectModalCategory('${escapeJsSingle(cat)}')" ${styleAttr} class="px-2.5 py-1 rounded-full border text-[10px] transition tap-scale ${cls}">${escapeHtml(cat)}</button>`;
-            }).join('');
+            disp.textContent = formatPeso(tendered - total);
         }
 
-        function selectModalCategory(cat) {
-            const input = document.getElementById('prod-category');
-            if (!input) return;
-            input.value = cat;
-            renderModalCategoryChips();
+        function completeCheckout() {
+            if (!state.cart || !state.cart.length) {
+                showToast('Cart is empty.');
+                return;
+            }
+            const { total } = getCartTotals();
+            const method = state.checkoutPayment || 'Cash';
+            const lowerMethod = method.toLowerCase();
+
+            let customerName = '';
+            let customerPhone = '';
+            let dueDate = '';
+            let gcashRef = '';
+
+            if (lowerMethod === 'utang') {
+                const nameInp = document.getElementById('utang-customer-input');
+                customerName = nameInp ? nameInp.value.trim() : '';
+                if (!customerName) {
+                    showToast('Please enter customer name for Utang.');
+                    return;
+                }
+                const phoneInp = document.getElementById('utang-phone-input');
+                const dueInp = document.getElementById('utang-duedate-input');
+                customerPhone = phoneInp ? phoneInp.value.trim() : '';
+                dueDate = dueInp ? dueInp.value : '';
+            } else if (lowerMethod === 'gcash') {
+                const refInp = document.getElementById('gcash-ref-input');
+                gcashRef = refInp ? refInp.value.trim() : '';
+            }
+
+            const saleId = 'sale_' + Date.now();
+            const nowIso = new Date().toISOString();
+            const itemsCopy = state.cart.map(c => ({ ...c }));
+
+            itemsCopy.forEach(item => {
+                const prod = (state.products || []).find(p => p.id === item.productId);
+                if (prod) {
+                    prod.stock = Math.max(0, (Number(prod.stock) || 0) - (Number(item.qty) || 0));
+                }
+            });
+
+            const saleRecord = {
+                id: saleId,
+                date: nowIso,
+                items: itemsCopy,
+                total,
+                paymentMethod: method,
+                customerName,
+                gcashRef,
+                voided: false
+            };
+            state.sales.unshift(saleRecord);
+
+            if (lowerMethod === 'utang') {
+                state.utang.unshift({
+                    id: 'utang_' + Date.now(),
+                    saleId,
+                    customerName,
+                    phone: customerPhone,
+                    dueDate,
+                    amount: total,
+                    status: 'unpaid',
+                    date: nowIso
+                });
+            }
+
+            state.cart = [];
+            saveState();
+            broadcastTransactionSync(false);
+            closeCartModal();
+            renderAll();
+            showToast(`Sale completed (${formatPeso(total)})!`);
         }
 
-        function openProductModal(prodId = null) {
+        function voidSaleTransaction(saleId) {
+            const sale = (state.sales || []).find(s => s.id === saleId);
+            if (!sale || sale.voided) return;
+            sale.voided = true;
+            sale.voidedAt = new Date().toISOString();
+
+            (sale.items || []).forEach(item => {
+                const prod = (state.products || []).find(p => p.id === item.productId);
+                if (prod) {
+                    prod.stock = (Number(prod.stock) || 0) + (Number(item.qty) || 0);
+                }
+            });
+
+            state.utang = (state.utang || []).filter(u => u.saleId !== saleId);
+            saveState();
+            broadcastTransactionSync(false);
+            renderAll();
+            showToast('Transaction voided & stock restored.');
+        }
+
+        function openProductModal(productId = null) {
             const modal = document.getElementById('product-modal');
-            const titleEl = document.getElementById('product-modal-title');
+            const title = document.getElementById('product-modal-title');
             const delBtn = document.getElementById('prod-delete-btn');
             if (!modal) return;
 
-            const fileInput = document.getElementById('prod-photo-file');
-            if (fileInput) fileInput.value = '';
+            const prod = productId ? (state.products || []).find(p => p.id === productId) : null;
+            document.getElementById('prod-id').value = prod ? prod.id : '';
+            document.getElementById('prod-name').value = prod ? (prod.name || '') : '';
+            document.getElementById('prod-barcode').value = prod ? (prod.barcode || '') : '';
+            document.getElementById('prod-price').value = prod ? (Number(prod.price) || 0) : '';
+            document.getElementById('prod-cost').value = prod ? (Number(prod.cost) || 0) : '';
+            document.getElementById('prod-low-stock').value = prod && typeof prod.lowStockThreshold === 'number' ? prod.lowStockThreshold : '';
+            document.getElementById('prod-image-data').value = prod ? (prod.imageData || '') : '';
+            document.getElementById('prod-image-url').value = prod ? (prod.imageUrl || '') : '';
 
-            if (prodId) {
-                const p = state.products.find(x => x.id === prodId);
-                if (!p) {
-                    showToast('Product not found.');
-                    return;
-                }
-                titleEl.textContent = 'Edit Product';
-                const setVal = (elId, val) => {
-                    const el = document.getElementById(elId);
-                    if (el) el.value = val;
-                };
-                setVal('prod-id', p.id);
-                setVal('prod-name', p.name || '');
-                setVal('prod-barcode', p.barcode || '');
-                setVal('prod-category', p.category || '');
-                setVal('prod-stock', Number(p.stock) || 0);
-                setVal('prod-price', Number(p.price) || 0);
-                setVal('prod-cost', Number(p.cost) || 0);
-                setVal('prod-low-stock', (p.lowStockThreshold !== null && p.lowStockThreshold !== undefined && p.lowStockThreshold !== '') ? Number(p.lowStockThreshold) : '');
-                setVal('prod-image-data', p.imageData || '');
-                setVal('prod-image-url', p.imageUrl || '');
-                updateProductPhotoPreview(p.imageData || p.imageUrl || '');
-                if (delBtn) delBtn.classList.remove('hidden');
-            } else {
-                titleEl.textContent = 'Add Product';
-                document.getElementById('prod-id').value = '';
-                document.getElementById('prod-name').value = '';
-                document.getElementById('prod-barcode').value = '';
-                document.getElementById('prod-category').value = '';
-                document.getElementById('prod-stock').value = '';
-                document.getElementById('prod-price').value = '';
-                document.getElementById('prod-cost').value = '';
-                document.getElementById('prod-low-stock').value = '';
-                document.getElementById('prod-image-data').value = '';
-                document.getElementById('prod-image-url').value = '';
-                updateProductPhotoPreview('');
-                delBtn.classList.add('hidden');
-            }
+            updateProductPhotoPreview(prod ? (prod.imageData || prod.imageUrl || '') : '');
 
-            renderModalCategoryChips();
+            if (title) title.textContent = prod ? 'Edit Product' : 'Add Product';
+            if (delBtn) delBtn.classList.toggle('hidden', !prod);
+
             modal.classList.remove('hidden');
         }
 
@@ -2033,23 +2217,17 @@
 
         function updateProductPhotoPreview(src) {
             const img = document.getElementById('prod-photo-preview');
-            const placeholder = document.getElementById('prod-photo-placeholder');
-            if (!img || !placeholder) return;
+            const ph = document.getElementById('prod-photo-placeholder');
+            if (!img || !ph) return;
             if (src) {
                 img.src = src;
                 img.classList.remove('hidden');
-                placeholder.classList.add('hidden');
+                ph.classList.add('hidden');
             } else {
                 img.src = '';
                 img.classList.add('hidden');
-                placeholder.classList.remove('hidden');
+                ph.classList.remove('hidden');
             }
-        }
-
-        function handleProductImageUrlChange() {
-            const url = document.getElementById('prod-image-url').value.trim();
-            const data = document.getElementById('prod-image-data').value;
-            updateProductPhotoPreview(url || data);
         }
 
         function handleProductPhotoImport(e) {
@@ -2057,83 +2235,59 @@
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function (ev) {
-                const img = new Image();
-                img.onload = function () {
-                    const maxDim = 480;
-                    let w = img.width, h = img.height;
-                    if (w > maxDim || h > maxDim) {
-                        if (w > h) {
-                            h = Math.round((h * maxDim) / w);
-                            w = maxDim;
-                        } else {
-                            w = Math.round((w * maxDim) / h);
-                            h = maxDim;
-                        }
-                    }
-                    const canvas = document.createElement('canvas');
-                    canvas.width = w;
-                    canvas.height = h;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, w, h);
-                    const compressed = canvas.toDataURL('image/jpeg', 0.8);
-                    document.getElementById('prod-image-data').value = compressed;
-                    updateProductPhotoPreview(compressed);
-                };
-                img.src = ev.target.result;
+                const dataUrl = String(ev.target.result || '');
+                document.getElementById('prod-image-data').value = dataUrl;
+                updateProductPhotoPreview(dataUrl);
             };
             reader.readAsDataURL(file);
         }
 
+        function handleProductImageUrlChange() {
+            const url = document.getElementById('prod-image-url').value.trim();
+            const dataUrl = document.getElementById('prod-image-data').value.trim();
+            updateProductPhotoPreview(dataUrl || url);
+        }
+
         function saveProduct(e) {
             e.preventDefault();
-            const id = document.getElementById('prod-id').value;
-            const name = document.getElementById('prod-name').value.trim();
-            const barcode = (document.getElementById('prod-barcode')?.value || '').trim();
-            const category = document.getElementById('prod-category').value.trim();
-            const stock = Math.max(0, parseInt(document.getElementById('prod-stock').value, 10) || 0);
-            const price = Math.max(0, parseFloat(document.getElementById('prod-price').value) || 0);
-            const cost = Math.max(0, parseFloat(document.getElementById('prod-cost').value) || 0);
-            const rawLowStock = document.getElementById('prod-low-stock').value.trim();
-            const lowStockThreshold = rawLowStock === '' ? null : Math.max(0, parseInt(rawLowStock, 10) || 0);
-            const imageData = document.getElementById('prod-image-data').value;
-            const imageUrl = document.getElementById('prod-image-url').value.trim();
+            const idVal = document.getElementById('prod-id').value.trim();
+            const nameVal = document.getElementById('prod-name').value.trim();
+            if (!nameVal) return;
 
-            if (!name || !category) {
-                showToast('Please enter product name and category.');
-                return;
-            }
+            const barcodeVal = document.getElementById('prod-barcode').value.trim();
+            const priceVal = Math.max(0, parseFloat(document.getElementById('prod-price').value) || 0);
+            const costVal = Math.max(0, parseFloat(document.getElementById('prod-cost').value) || 0);
+            const lowRaw = document.getElementById('prod-low-stock').value;
+            const lowVal = lowRaw === '' ? undefined : Math.max(0, parseInt(lowRaw, 10) || 0);
+            const imageDataVal = document.getElementById('prod-image-data').value.trim();
+            const imageUrlVal = document.getElementById('prod-image-url').value.trim();
 
-            ensureCategorySaved(category);
-
-            if (id) {
-                const idx = state.products.findIndex(p => p.id === id);
-                if (idx !== -1) {
-                    state.products[idx] = {
-                        ...state.products[idx],
-                        name,
-                        barcode,
-                        category,
-                        stock,
-                        price,
-                        cost,
-                        lowStockThreshold,
-                        imageData,
-                        imageUrl
-                    };
+            if (idVal) {
+                const prod = (state.products || []).find(p => p.id === idVal);
+                if (prod) {
+                    prod.name = nameVal;
+                    prod.barcode = barcodeVal;
+                    prod.price = priceVal;
+                    prod.cost = costVal;
+                    prod.lowStockThreshold = lowVal;
+                    prod.imageData = imageDataVal;
+                    prod.imageUrl = imageUrlVal;
                 }
                 showToast('Product updated!');
             } else {
-                state.products.push({
-                    id: 'prod_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-                    name,
-                    barcode,
-                    category,
-                    stock,
-                    price,
-                    cost,
-                    lowStockThreshold,
-                    imageData,
-                    imageUrl
+                const cat = state.selectedCategory && state.selectedCategory !== 'All' ? state.selectedCategory : 'Drinks';
+                ensureCategorySaved(cat);
+                state.products.unshift({
+                    id: 'prod_' + Date.now(),
+                    name: nameVal,
+                    barcode: barcodeVal,
+                    category: cat,
+                    stock: 0,
+                    price: priceVal,
+                    cost: costVal,
+                    lowStockThreshold: lowVal,
+                    imageData: imageDataVal,
+                    imageUrl: imageUrlVal
                 });
                 showToast('Product added!');
             }
@@ -2144,454 +2298,115 @@
         }
 
         function deleteCurrentProduct() {
-            const id = document.getElementById('prod-id').value;
-            if (!id) return;
-            state.products = state.products.filter(p => p.id !== id);
-            state.cart = state.cart.filter(c => c.productId !== id);
+            const idVal = document.getElementById('prod-id').value.trim();
+            if (!idVal) return;
+            state.products = (state.products || []).filter(p => p.id !== idVal);
+            state.cart = (state.cart || []).filter(c => c.productId !== idVal);
             saveState();
             closeProductModal();
             renderAll();
             showToast('Product deleted.');
         }
 
-        // ==================== CART & CHECKOUT ====================
-        function addToCart(prodId) {
-            const prod = state.products.find(p => p.id === prodId);
-            if (!prod) return;
-            const stock = Number(prod.stock) || 0;
-            if (stock <= 0) {
-                showToast(`${prod.name} is out of stock.`);
-                return;
-            }
-            const existing = state.cart.find(c => c.productId === prodId);
-            if (existing) {
-                if (existing.qty >= stock) {
-                    showToast(`Only ${stock} available in stock.`);
-                    return;
-                }
-                existing.qty += 1;
-            } else {
-                state.cart.push({ productId: prodId, qty: 1 });
-            }
-            saveState();
-            renderCartUI();
-            renderPOSGrid();
-            showToast(`Added ${prod.name}`);
-        }
-
-        function updateCartQty(prodId, delta) {
-            const idx = state.cart.findIndex(c => c.productId === prodId);
-            if (idx === -1) return;
-            const prod = state.products.find(p => p.id === prodId);
-            const maxStock = prod ? Number(prod.stock) || 0 : 9999;
-            const nextQty = state.cart[idx].qty + delta;
-            if (nextQty <= 0) {
-                state.cart.splice(idx, 1);
-            } else if (nextQty > maxStock) {
-                showToast(`Only ${maxStock} left in stock.`);
-                return;
-            } else {
-                state.cart[idx].qty = nextQty;
-            }
-            saveState();
-            renderCartUI();
-            renderPOSGrid();
-            renderCartModalItems();
-        }
-
-        function clearCart() {
-            state.cart = [];
-            saveState();
-            renderCartUI();
-            renderPOSGrid();
-            renderCartModalItems();
-        }
-
-        function getCartSummary() {
-            let totalQty = 0;
-            let totalAmount = 0;
-            const validItems = [];
-            state.cart.forEach(item => {
-                const prod = state.products.find(p => p.id === item.productId);
-                if (!prod) return;
-                const qty = Number(item.qty) || 0;
-                const subtotal = qty * (Number(prod.price) || 0);
-                totalQty += qty;
-                totalAmount += subtotal;
-                validItems.push({ prod, qty, subtotal });
+        function setStockFilter(filter) {
+            state.stockFilter = filter || 'all';
+            ['all', 'low', 'out'].forEach(f => {
+                const btn = document.getElementById(`stock-filter-${f}`);
+                if (!btn) return;
+                btn.className = f === state.stockFilter
+                    ? 'px-3.5 py-1.5 rounded-full text-xs font-bold bg-cafe-espresso text-white'
+                    : 'px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-cafe-text border border-cafe-border';
             });
-            return { totalQty, totalAmount, validItems };
-        }
-
-        function renderCartUI() {
-            const { totalQty, totalAmount, validItems } = getCartSummary();
-            const accent = state.adaptiveAccent || '#363E18';
-
-            const topBadge = document.getElementById('top-cart-badge');
-            if (topBadge) {
-                topBadge.textContent = totalQty;
-                topBadge.classList.toggle('hidden', totalQty === 0);
-                topBadge.style.backgroundColor = accent;
-            }
-
-            const floatBar = document.getElementById('floating-cart-bar');
-            const floatBadge = document.getElementById('float-cart-badge');
-            const floatTotal = document.getElementById('float-cart-total');
-            if (floatBar && floatBadge && floatTotal) {
-                floatBar.classList.toggle('hidden', totalQty === 0 || state.activeTab !== 'pos');
-                floatBadge.textContent = totalQty;
-                floatBadge.style.color = accent;
-                floatTotal.textContent = formatPHP(totalAmount);
-                const btn = floatBar.querySelector('button');
-                if (btn) btn.style.backgroundColor = accent;
-            }
-
-            const deskLabel = document.getElementById('desk-cart-count-label');
-            const deskTotal = document.getElementById('desk-cart-total');
-            const deskItems = document.getElementById('desk-cart-items');
-            if (deskLabel) deskLabel.textContent = `${totalQty} item${totalQty === 1 ? '' : 's'}`;
-            if (deskTotal) deskTotal.textContent = formatPHP(totalAmount);
-            if (deskItems) {
-                if (validItems.length === 0) {
-                    deskItems.innerHTML = `<p class="text-xs text-cafe-muted text-center py-8">Tap products on the left to build an order.</p>`;
-                } else {
-                    deskItems.innerHTML = validItems.map(({ prod, qty, subtotal }) => `
-                        <div class="flex items-center justify-between gap-2 bg-cafe-bg rounded-2xl p-2.5 border border-cafe-border">
-                            <div class="min-w-0 flex-1">
-                                <p class="text-xs font-extrabold text-cafe-text truncate">${escapeHtml(prod.name)}</p>
-                                <p class="text-[11px] text-cafe-muted tabular-nums">${formatPHP(prod.price)} × ${qty} = <strong class="text-cafe-text">${formatPHP(subtotal)}</strong></p>
-                            </div>
-                            <div class="flex items-center gap-1.5">
-                                <button type="button" onclick="updateCartQty('${escapeJsSingle(prod.id)}', -1)" class="w-6 h-6 rounded-full bg-white border border-cafe-border text-xs font-extrabold flex items-center justify-center tap-scale">−</button>
-                                <span class="text-xs font-extrabold w-4 text-center tabular-nums">${qty}</span>
-                                <button type="button" onclick="updateCartQty('${escapeJsSingle(prod.id)}', 1)" class="w-6 h-6 rounded-full bg-white border border-cafe-border text-xs font-extrabold flex items-center justify-center tap-scale">+</button>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-            }
-        }
-
-        function openCartModal() {
-            const { totalQty } = getCartSummary();
-            if (totalQty === 0) {
-                showToast('Cart is empty. Add items first.');
-                return;
-            }
-            renderCheckoutPaymentButtons();
-            renderCartModalItems();
-            const dueInput = document.getElementById('utang-duedate-input');
-            if (dueInput && !dueInput.value) {
-                const nextWeek = new Date(Date.now() + 7 * 86400000);
-                dueInput.value = nextWeek.toISOString().split('T')[0];
-            }
-            document.getElementById('cart-modal').classList.remove('hidden');
-        }
-
-        function closeCartModal() {
-            document.getElementById('cart-modal').classList.add('hidden');
-        }
-
-        function renderCartModalItems() {
-            const { totalQty, totalAmount, validItems } = getCartSummary();
-            const container = document.getElementById('cart-modal-items');
-            const totalEl = document.getElementById('cart-modal-total');
-            const subEl = document.getElementById('cart-modal-subtitle');
-            if (!container) return;
-
-            if (totalQty === 0) {
-                closeCartModal();
-                return;
-            }
-
-            if (subEl) subEl.textContent = `${totalQty} item${totalQty === 1 ? '' : 's'} in order`;
-            if (totalEl) totalEl.textContent = formatPHP(totalAmount);
-
-            container.innerHTML = validItems.map(({ prod, qty, subtotal }) => `
-                <div class="flex items-center justify-between gap-2 bg-cafe-bg rounded-2xl p-2.5 border border-cafe-border">
-                    <div class="min-w-0 flex-1">
-                        <p class="text-xs font-extrabold text-cafe-text truncate">${escapeHtml(prod.name)}</p>
-                        <p class="text-[11px] text-cafe-muted tabular-nums">${formatPHP(prod.price)} each</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button type="button" onclick="updateCartQty('${escapeJsSingle(prod.id)}', -1)" class="w-7 h-7 rounded-full bg-white border border-cafe-border text-xs font-extrabold flex items-center justify-center tap-scale">−</button>
-                        <span class="text-xs font-extrabold w-5 text-center tabular-nums">${qty}</span>
-                        <button type="button" onclick="updateCartQty('${escapeJsSingle(prod.id)}', 1)" class="w-7 h-7 rounded-full bg-white border border-cafe-border text-xs font-extrabold flex items-center justify-center tap-scale">+</button>
-                    </div>
-                    <span class="text-xs font-extrabold text-cafe-text w-16 text-right tabular-nums">${formatPHP(subtotal)}</span>
-                </div>
-            `).join('');
-
-            updateCheckoutChange();
-        }
-
-        function renderCheckoutPaymentButtons() {
-            const container = document.getElementById('checkout-payment-buttons');
-            if (!container) return;
-            const accent = state.adaptiveAccent || '#363E18';
-            if (!state.paymentOptions.includes(state.checkoutPayment)) {
-                state.checkoutPayment = state.paymentOptions[0] || 'Cash';
-            }
-
-            container.innerHTML = state.paymentOptions.map(opt => {
-                const active = state.checkoutPayment === opt;
-                const styleAttr = active ? `style="background-color:${accent};border-color:${accent};color:#FFFFFF;"` : '';
-                const cls = active
-                    ? 'border-transparent text-white font-extrabold'
-                    : 'bg-white text-cafe-text border-cafe-border font-bold';
-                return `<button type="button" onclick="selectCheckoutPayment('${escapeJsSingle(opt)}')" ${styleAttr} class="py-2 px-2.5 rounded-xl border text-xs truncate tap-scale ${cls}">${escapeHtml(opt)}</button>`;
-            }).join('');
-
-            const method = state.checkoutPayment.toLowerCase();
-            document.getElementById('payment-cash-fields').classList.toggle('hidden', method !== 'cash');
-            document.getElementById('payment-gcash-fields').classList.toggle('hidden', method !== 'gcash');
-            document.getElementById('payment-utang-fields').classList.toggle('hidden', method !== 'utang');
-        }
-
-        function selectCheckoutPayment(opt) {
-            state.checkoutPayment = opt;
-            renderCheckoutPaymentButtons();
-            updateCheckoutChange();
-        }
-
-        function addCustomPaymentOption() {
-            const input = document.getElementById('new-payment-option-input');
-            if (!input) return;
-            const val = input.value.trim();
-            if (!val) return;
-            if (!state.paymentOptions.some(o => o.toLowerCase() === val.toLowerCase())) {
-                state.paymentOptions.push(val);
-            }
-            state.checkoutPayment = val;
-            input.value = '';
-            saveState();
-            renderCheckoutPaymentButtons();
-            renderExpenseSourceOptions();
-            showToast(`Added "${val}" payment option`);
-        }
-
-        function updateCheckoutChange() {
-            const { totalAmount } = getCartSummary();
-            const tenderedInput = document.getElementById('cash-tendered-input');
-            const changeEl = document.getElementById('checkout-change-display');
-            if (!tenderedInput || !changeEl) return;
-            const tendered = parseFloat(tenderedInput.value);
-            if (isNaN(tendered) || tendered <= 0) {
-                changeEl.textContent = '₱0.00';
-                changeEl.className = 'font-extrabold text-cafe-green text-sm tabular-nums';
-                return;
-            }
-            const diff = tendered - totalAmount;
-            changeEl.textContent = formatPHP(Math.max(0, diff));
-            changeEl.className = diff < 0
-                ? 'font-extrabold text-cafe-red text-sm tabular-nums'
-                : 'font-extrabold text-cafe-green text-sm tabular-nums';
-        }
-
-        function completeCheckout() {
-            const { totalAmount, validItems } = getCartSummary();
-            if (validItems.length === 0) return;
-
-            const paymentMethod = state.checkoutPayment || 'Cash';
-            const lowerMethod = paymentMethod.toLowerCase();
-
-            if (lowerMethod === 'cash') {
-                const tenderedVal = document.getElementById('cash-tendered-input').value;
-                if (tenderedVal !== '' && Number(tenderedVal) < totalAmount) {
-                    showToast('Cash received is less than total amount.');
-                    return;
-                }
-            }
-
-            let customerName = '';
-            let phone = '';
-            let dueDate = '';
-            let gcashRef = '';
-
-            if (lowerMethod === 'utang') {
-                customerName = document.getElementById('utang-customer-input').value.trim();
-                phone = document.getElementById('utang-phone-input').value.trim();
-                dueDate = document.getElementById('utang-duedate-input').value || todayISO();
-                if (!customerName) {
-                    showToast('Please enter customer name for Utang.');
-                    return;
-                }
-            } else if (lowerMethod === 'gcash') {
-                gcashRef = document.getElementById('gcash-ref-input').value.trim();
-            }
-
-            let totalCost = 0;
-            const saleItems = validItems.map(({ prod, qty, subtotal }) => {
-                prod.stock = Math.max(0, (Number(prod.stock) || 0) - qty);
-                const unitCost = Number(prod.cost) || 0;
-                totalCost += unitCost * qty;
-                return {
-                    productId: prod.id,
-                    name: prod.name,
-                    qty,
-                    price: Number(prod.price) || 0,
-                    cost: unitCost,
-                    subtotal
-                };
-            });
-
-            const saleId = 'sale_' + Date.now();
-            const nowISO = new Date().toISOString();
-
-            state.sales.unshift({
-                id: saleId,
-                date: nowISO,
-                items: saleItems,
-                total: totalAmount,
-                totalCost,
-                paymentMethod,
-                customerName,
-                gcashRef
-            });
-
-            if (lowerMethod === 'utang') {
-                state.utang.unshift({
-                    id: 'utang_' + Date.now(),
-                    saleId,
-                    customerName,
-                    phone,
-                    dueDate,
-                    items: saleItems,
-                    total: totalAmount,
-                    paidAmount: 0,
-                    status: 'unpaid',
-                    createdAt: nowISO
-                });
-            }
-
-            state.cart = [];
-            document.getElementById('cash-tendered-input').value = '';
-            document.getElementById('utang-customer-input').value = '';
-            document.getElementById('utang-phone-input').value = '';
-            document.getElementById('gcash-ref-input').value = '';
-
-            saveState();
-            closeCartModal();
-            renderAll();
-            showToast(lowerMethod === 'utang' ? `Recorded Utang for ${customerName}` : `Sale completed (${formatPHP(totalAmount)})!`);
-        }
-
-        // ==================== STOCK TAB & ALERTS ====================
-        function setStockFilter(f) {
-            state.stockFilter = f;
             renderStockTab();
         }
 
         function clearStockSearch() {
-            const input = document.getElementById('stock-search');
-            if (input) input.value = '';
+            const inp = document.getElementById('stock-search');
+            if (inp) inp.value = '';
+            const btn = document.getElementById('stock-clear-search');
+            if (btn) btn.classList.add('hidden');
             renderStockTab();
         }
 
-        function adjustProductStock(prodId, delta) {
-            const p = state.products.find(x => x.id === prodId);
-            if (!p) return;
-            p.stock = Math.max(0, (Number(p.stock) || 0) + delta);
+        function adjustStock(productId, delta) {
+            const prod = (state.products || []).find(p => p.id === productId);
+            if (!prod) return;
+            prod.stock = Math.max(0, (Number(prod.stock) || 0) + delta);
             saveState();
-            renderAll();
+            renderStockTab();
+            renderHeroAndCategories();
+            renderStockAlertsBadge();
         }
 
         function renderStockTab() {
             const listEl = document.getElementById('stock-list');
-            const sumEl = document.getElementById('stock-summary-text');
-            const searchInput = document.getElementById('stock-search');
-            const clearBtn = document.getElementById('stock-clear-search');
+            const summaryEl = document.getElementById('stock-summary-text');
             if (!listEl) return;
 
-            const q = (searchInput ? searchInput.value : '').trim().toLowerCase();
-            if (clearBtn) clearBtn.classList.toggle('hidden', q.length === 0);
-
-            const accent = state.adaptiveAccent || '#363E18';
-            ['all', 'low', 'out'].forEach(f => {
-                const btn = document.getElementById(`stock-filter-${f}`);
-                if (!btn) return;
-                if (state.stockFilter === f) {
-                    btn.style.backgroundColor = accent;
-                    btn.style.borderColor = accent;
-                    btn.style.color = '#FFFFFF';
-                } else {
-                    btn.style.backgroundColor = '#FFFFFF';
-                    btn.style.borderColor = '';
-                    btn.style.color = '';
-                }
+            const products = state.products || [];
+            let stockVal = 0;
+            products.forEach(p => {
+                stockVal += (Number(p.stock) || 0) * (Number(p.cost) || Number(p.price) || 0);
             });
-
-            const totalValue = state.products.reduce((acc, p) => acc + ((Number(p.price) || 0) * (Number(p.stock) || 0)), 0);
-            if (sumEl) {
-                sumEl.textContent = `${state.products.length} product${state.products.length === 1 ? '' : 's'} • Stock Value: ${formatPHP(totalValue)}`;
+            if (summaryEl) {
+                summaryEl.textContent = `${products.length} products • Stock Value: ${formatPeso(stockVal)}`;
             }
 
-            let items = [...state.products];
-            if (state.stockFilter === 'low') {
-                items = items.filter(p => isProductLowStock(p));
-            } else if (state.stockFilter === 'out') {
-                items = items.filter(p => (Number(p.stock) || 0) <= 0);
+            const searchEl = document.getElementById('stock-search');
+            const clearBtn = document.getElementById('stock-clear-search');
+            const query = String((searchEl && searchEl.value) || '').trim().toLowerCase();
+            if (clearBtn) clearBtn.classList.toggle('hidden', !query);
+
+            let filtered = [...products];
+            if (state.stockFilter === 'out') {
+                filtered = filtered.filter(p => (Number(p.stock) || 0) <= 0);
+            } else if (state.stockFilter === 'low') {
+                filtered = filtered.filter(p => typeof p.lowStockThreshold === 'number' && p.lowStockThreshold >= 0 && (Number(p.stock) || 0) > 0 && (Number(p.stock) || 0) <= p.lowStockThreshold);
             }
-            if (q) {
-                items = items.filter(p =>
-                    (p.name || '').toLowerCase().includes(q) ||
-                    (p.category || '').toLowerCase().includes(q)
+            if (query) {
+                filtered = filtered.filter(p =>
+                    String(p.name || '').toLowerCase().includes(query) ||
+                    String(p.category || '').toLowerCase().includes(query)
                 );
             }
 
-            if (items.length === 0) {
-                listEl.innerHTML = `<div class="col-span-full bg-white rounded-2xl border border-cafe-border p-6 text-center text-xs text-cafe-muted">${q ? 'No matching products found in stock.' : 'No products in this stock view.'}</div>`;
+            const slice = filtered.slice(0, 60);
+            if (!slice.length) {
+                listEl.innerHTML = `<div class="col-span-full bg-white rounded-2xl border border-cafe-border p-6 text-center text-xs text-cafe-muted">No items match this filter.</div>`;
                 return;
             }
 
-            listEl.innerHTML = items.map(p => {
-                const stock = Number(p.stock) || 0;
-                const imgSrc = getProductVisualSrc(p);
-                const isLow = isProductLowStock(p);
-                const badge = stock <= 0
-                    ? `<span class="px-2 py-0.5 rounded-full bg-cafe-redBg text-cafe-red text-[10px] font-extrabold">Out of Stock</span>`
-                    : isLow
-                        ? `<span class="px-2 py-0.5 rounded-full bg-cafe-amberBg text-cafe-amber text-[10px] font-extrabold">Low (${stock}/${p.lowStockThreshold})</span>`
-                        : `<span class="px-2 py-0.5 rounded-full bg-cafe-greenBg text-cafe-green text-[10px] font-extrabold">In Stock (${stock})${p.lowStockThreshold ? ` • Alert ≤${p.lowStockThreshold}` : ''}</span>`;
+            listEl.innerHTML = slice.map(prod => {
+                const stock = Number(prod.stock) || 0;
                 return `
-                    <div class="virtual-card-item bg-white rounded-2xl border border-cafe-border p-3.5 shadow-cafe flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <div class="w-12 h-12 rounded-xl bg-cafe-bg border border-cafe-border flex items-center justify-center overflow-hidden shrink-0">
-                                ${imgSrc ? `<img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async" onerror="handleImgError(this, '${escapeJsSingle(p.id)}')" class="w-full h-full object-contain">` : `<span class="text-xl">📦</span>`}
-                            </div>
-                            <div class="min-w-0">
-                                <p class="text-xs font-extrabold text-cafe-text truncate">${escapeHtml(p.name)}</p>
-                                <p class="text-[11px] text-cafe-muted">${escapeHtml(p.category || 'General')} • ${formatPHP(p.price)}</p>
-                                <div class="mt-1">${badge}</div>
-                            </div>
+                    <div class="bg-white rounded-2xl border border-cafe-border p-3.5 shadow-cafe flex items-center justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs font-extrabold text-cafe-text truncate">${prod.name}</p>
+                            <p class="text-[11px] text-cafe-muted tabular-nums">${prod.category || 'General'} • ${formatPeso(prod.price)}</p>
+                            <p class="text-xs font-extrabold mt-1 ${stock <= 0 ? 'text-cafe-red' : 'text-cafe-green'} tabular-nums">Stock: ${stock} pcs</p>
                         </div>
                         <div class="flex items-center gap-1.5 shrink-0">
-                            <button type="button" onclick="adjustProductStock('${escapeJsSingle(p.id)}', -1)" class="w-7 h-7 rounded-full bg-cafe-bg border border-cafe-border text-xs font-extrabold tap-scale">−</button>
-                            <span class="w-6 text-center text-xs font-extrabold tabular-nums">${stock}</span>
-                            <button type="button" onclick="adjustProductStock('${escapeJsSingle(p.id)}', 1)" class="w-7 h-7 rounded-full bg-cafe-bg border border-cafe-border text-xs font-extrabold tap-scale">+</button>
-                            <button type="button" onclick="openProductModal('${escapeJsSingle(p.id)}')" class="ml-1 px-2.5 py-1.5 rounded-xl bg-cafe-bg border border-cafe-border text-[11px] font-bold tap-scale">Edit</button>
+                            <button type="button" onclick="adjustStock('${prod.id}', -1)" class="w-8 h-8 rounded-xl bg-cafe-bg border border-cafe-border text-xs font-extrabold tap-scale">-</button>
+                            <button type="button" onclick="adjustStock('${prod.id}', 1)" class="w-8 h-8 rounded-xl bg-[#363E18] text-white text-xs font-extrabold tap-scale">+</button>
+                            <button type="button" onclick="openProductModal('${prod.id}')" class="w-8 h-8 rounded-xl bg-cafe-bg border border-cafe-border text-xs font-extrabold tap-scale">✎</button>
                         </div>
                     </div>
                 `;
             }).join('');
         }
 
-        function updateAlertBadges() {
-            const alertItems = state.products.filter(p => isProductAlerted(p));
-            const topAlertBadge = document.getElementById('top-alert-badge');
-            if (topAlertBadge) {
-                topAlertBadge.textContent = alertItems.length;
-                topAlertBadge.classList.toggle('hidden', alertItems.length === 0);
-            }
-
-            const unpaidUtang = state.utang.filter(u => u.status !== 'paid');
-            ['desk-utang-badge', 'mob-utang-badge'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.textContent = unpaidUtang.length;
-                    el.classList.toggle('hidden', unpaidUtang.length === 0);
-                }
+        function renderStockAlertsBadge() {
+            const products = state.products || [];
+            const alertItems = products.filter(p => {
+                const st = Number(p.stock) || 0;
+                const isLow = typeof p.lowStockThreshold === 'number' && p.lowStockThreshold >= 0 && st > 0 && st <= p.lowStockThreshold;
+                return st <= 0 || isLow;
             });
+            const badge = document.getElementById('top-alert-badge');
+            if (badge) {
+                badge.textContent = alertItems.length;
+                badge.classList.toggle('hidden', alertItems.length <= 0);
+            }
         }
 
         function openStockAlertsModal() {
@@ -2599,23 +2414,25 @@
             const list = document.getElementById('stock-alerts-list');
             if (!modal || !list) return;
 
-            const lowOrOut = state.products.filter(p => isProductAlerted(p));
-            if (lowOrOut.length === 0) {
-                list.innerHTML = `<p class="text-xs text-cafe-muted text-center py-6">All products have healthy stock levels.</p>`;
+            const products = state.products || [];
+            const alertItems = products.filter(p => {
+                const st = Number(p.stock) || 0;
+                const isLow = typeof p.lowStockThreshold === 'number' && p.lowStockThreshold >= 0 && st > 0 && st <= p.lowStockThreshold;
+                return st <= 0 || isLow;
+            });
+
+            if (!alertItems.length) {
+                list.innerHTML = `<p class="text-xs text-cafe-muted text-center py-4">No low or out-of-stock alerts.</p>`;
             } else {
-                list.innerHTML = lowOrOut.map(p => {
+                list.innerHTML = alertItems.slice(0, 30).map(p => {
                     const st = Number(p.stock) || 0;
                     return `
-                        <div class="flex items-center justify-between gap-2 bg-cafe-bg rounded-2xl p-3 border border-cafe-border">
-                            <div>
-                                <p class="text-xs font-extrabold text-cafe-text">${escapeHtml(p.name)}</p>
-                                <p class="text-[11px] font-bold ${st <= 0 ? 'text-cafe-red' : 'text-cafe-amber'}">
-                                    ${st <= 0 ? 'Out of stock (0 left)' : `Low stock (${st} left • Alert ≤${p.lowStockThreshold})`}
-                                </p>
+                        <div class="flex items-center justify-between gap-2 bg-cafe-bg rounded-xl p-2.5 border border-cafe-border">
+                            <div class="min-w-0">
+                                <p class="text-xs font-bold text-cafe-text truncate">${p.name}</p>
+                                <p class="text-[10px] font-bold ${st <= 0 ? 'text-cafe-red' : 'text-cafe-amber'}">${st <= 0 ? 'Out of Stock' : 'Low Stock: ' + st + ' pcs'}</p>
                             </div>
-                            <button type="button" onclick="adjustProductStock('${escapeJsSingle(p.id)}', 5); openStockAlertsModal();" class="px-3 py-1.5 rounded-full bg-cafe-espresso text-white text-[11px] font-extrabold tap-scale">
-                                +5 Stock
-                            </button>
+                            <button type="button" onclick="adjustStock('${p.id}', 5); openStockAlertsModal();" class="px-2.5 py-1 rounded-lg bg-[#363E18] text-white text-[10px] font-extrabold tap-scale">+5</button>
                         </div>
                     `;
                 }).join('');
@@ -2628,35 +2445,36 @@
             if (modal) modal.classList.add('hidden');
         }
 
-        // ==================== TRANSACTIONS, UTANG & EXPENSES ====================
-        function setLedgerFilter(f) {
-            state.ledgerFilter = f;
+        function setLedgerFilter(filter) {
+            state.ledgerFilter = filter || 'all';
+            ['all', 'utang', 'expenses'].forEach(f => {
+                const pill = document.getElementById(`ledger-pill-${f}`);
+                if (!pill) return;
+                pill.className = f === state.ledgerFilter
+                    ? 'px-3.5 py-1.5 rounded-full text-xs font-bold bg-cafe-espresso text-white'
+                    : 'px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-cafe-text border border-cafe-border';
+            });
             renderLedgerTab();
         }
 
-        function renderExpenseSourceOptions() {
+        function populateExpenseSourceSelect() {
             const sel = document.getElementById('expense-source');
             if (!sel) return;
+            const opts = state.paymentOptions || ['Cash', 'GCash'];
             const current = sel.value;
-            sel.innerHTML = state.paymentOptions.map(opt => `<option value="${escapeHtml(opt)}">Deduct: ${escapeHtml(opt)}</option>`).join('');
-            if (current && state.paymentOptions.includes(current)) {
-                sel.value = current;
-            }
+            sel.innerHTML = opts.map(o => `<option value="${o}">${o}</option>`).join('');
+            if (current && opts.includes(current)) sel.value = current;
         }
 
         function addExpense(e) {
             e.preventDefault();
-            const titleEl = document.getElementById('expense-title');
-            const sourceEl = document.getElementById('expense-source');
-            const amountEl = document.getElementById('expense-amount');
-            const title = titleEl.value.trim();
-            const source = sourceEl.value || 'Cash';
-            const amount = parseFloat(amountEl.value);
-
-            if (!title || isNaN(amount) || amount <= 0) {
-                showToast('Enter valid expense details and amount.');
-                return;
-            }
+            const titleInp = document.getElementById('expense-title');
+            const srcInp = document.getElementById('expense-source');
+            const amtInp = document.getElementById('expense-amount');
+            const title = titleInp ? titleInp.value.trim() : '';
+            const source = srcInp ? srcInp.value : 'Cash';
+            const amount = parseFloat(amtInp ? amtInp.value : '0');
+            if (!title || isNaN(amount) || amount <= 0) return;
 
             state.expenses.unshift({
                 id: 'exp_' + Date.now(),
@@ -2665,209 +2483,143 @@
                 amount,
                 date: new Date().toISOString()
             });
-
-            if (source.toLowerCase() === 'gcash') {
-                state.gcashCapital = Math.max(0, (Number(state.gcashCapital) || 0) - amount);
-            }
-
-            titleEl.value = '';
-            amountEl.value = '';
+            if (titleInp) titleInp.value = '';
+            if (amtInp) amtInp.value = '';
             saveState();
+            broadcastTransactionSync(false);
             renderAll();
-            showToast(`Expense recorded (${formatPHP(amount)})`);
+            showToast('Expense recorded!');
         }
 
         function markUtangPaid(utangId) {
-            const u = state.utang.find(x => x.id === utangId);
-            if (!u) return;
-            u.status = 'paid';
-            u.paidAmount = u.total;
-            u.paidAt = new Date().toISOString();
+            const rec = (state.utang || []).find(u => u.id === utangId);
+            if (!rec) return;
+            rec.status = 'paid';
+            rec.paidAt = new Date().toISOString();
             saveState();
+            broadcastTransactionSync(false);
             renderAll();
-            showToast(`Marked ${u.customerName}'s utang as PAID!`);
+            showToast(`Marked ${rec.customerName}'s utang as paid!`);
         }
 
-        let currentReminderText = '';
-        function openUtangReminder(utangId) {
-            const u = state.utang.find(x => x.id === utangId);
-            if (!u) return;
-            const itemsSummary = (u.items || []).map(i => `${i.name} (x${i.qty})`).join(', ');
-            currentReminderText = `Magandang araw ${u.customerName}! Paalala lang po mula sa ${state.storeName} tungkol sa inyong balance na ${formatPHP(u.total)} (${itemsSummary}). Due date: ${u.dueDate || 'Today'}. Salamat po!`;
-            document.getElementById('reminder-text-box').value = currentReminderText;
-            document.getElementById('reminder-modal').classList.remove('hidden');
+        function openReminderModal(utangId) {
+            const rec = (state.utang || []).find(u => u.id === utangId);
+            const modal = document.getElementById('reminder-modal');
+            const box = document.getElementById('reminder-text-box');
+            if (!rec || !modal || !box) return;
+            box.value = `Hi ${rec.customerName}, friendly reminder po mula sa ${state.storeName || 'Sari-Sari Store'} tungkol sa inyong balanse na ${formatPeso(rec.amount)}. Salamat!`;
+            modal.classList.remove('hidden');
         }
 
         function closeReminderModal() {
-            document.getElementById('reminder-modal').classList.add('hidden');
+            const modal = document.getElementById('reminder-modal');
+            if (modal) modal.classList.add('hidden');
         }
 
         function copyReminderText() {
             const box = document.getElementById('reminder-text-box');
+            if (!box) return;
             box.select();
-            document.execCommand('copy');
-            showToast('Reminder copied to clipboard!');
+            try { document.execCommand('copy'); } catch (e) {}
+            showToast('Reminder copied!');
         }
 
         function renderLedgerTab() {
-            renderExpenseSourceOptions();
+            populateExpenseSourceSelect();
             const container = document.getElementById('ledger-content');
             if (!container) return;
 
-            const accent = state.adaptiveAccent || '#363E18';
-            ['all', 'utang', 'expenses'].forEach(f => {
-                const pill = document.getElementById(`ledger-pill-${f}`);
-                if (!pill) return;
-                if (state.ledgerFilter === f) {
-                    pill.style.backgroundColor = accent;
-                    pill.style.borderColor = accent;
-                    pill.style.color = '#FFFFFF';
-                } else {
-                    pill.style.backgroundColor = '#FFFFFF';
-                    pill.style.borderColor = '';
-                    pill.style.color = '';
-                }
+            const unpaidUtang = (state.utang || []).filter(u => u.status !== 'paid');
+            const badgeText = unpaidUtang.length ? String(unpaidUtang.length) : '';
+            ['desk-utang-badge', 'mob-utang-badge'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.textContent = badgeText;
+                el.classList.toggle('hidden', !unpaidUtang.length);
             });
 
-            let html = '';
-
+            const parts = [];
             if (state.ledgerFilter === 'all' || state.ledgerFilter === 'utang') {
-                const unpaid = state.utang.filter(u => u.status !== 'paid');
-                const paid = state.utang.filter(u => u.status === 'paid');
-                html += `
-                    <div class="bg-white rounded-2xl border border-cafe-border p-4 shadow-cafe space-y-3">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-sm font-extrabold text-cafe-text">Utang List (${unpaid.length} Unpaid)</h3>
-                        </div>
-                        ${unpaid.length === 0 && paid.length === 0
-                            ? `<p class="text-xs text-cafe-muted py-3">No utang records yet.</p>`
-                            : [...unpaid, ...paid.slice(0, 5)].map(u => {
-                                const isPaid = u.status === 'paid';
-                                return `
-                                    <div class="flex flex-wrap items-center justify-between gap-2 bg-cafe-bg rounded-2xl p-3 border border-cafe-border">
-                                        <div>
-                                            <div class="flex items-center gap-2">
-                                                <p class="text-xs font-extrabold text-cafe-text">${escapeHtml(u.customerName)}</p>
-                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${isPaid ? 'bg-cafe-greenBg text-cafe-green' : 'bg-cafe-redBg text-cafe-red'}">
-                                                    ${isPaid ? 'PAID' : 'UNPAID'}
-                                                </span>
-                                            </div>
-                                            <p class="text-[11px] text-cafe-muted mt-0.5">Due: ${escapeHtml(u.dueDate || 'N/A')} • ${escapeHtml((u.items || []).map(i => `${i.name}×${i.qty}`).join(', '))}</p>
-                                        </div>
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-xs font-extrabold text-cafe-text tabular-nums">${formatPHP(u.total)}</span>
-                                            ${!isPaid ? `
-                                                <button type="button" onclick="openUtangReminder('${escapeJsSingle(u.id)}')" class="px-2.5 py-1.5 rounded-xl bg-white border border-cafe-border text-[11px] font-bold tap-scale">Remind</button>
-                                                <button type="button" onclick="markUtangPaid('${escapeJsSingle(u.id)}')" class="px-3 py-1.5 rounded-xl bg-cafe-green text-white text-[11px] font-extrabold tap-scale">Mark Paid</button>
-                                            ` : ''}
-                                        </div>
-                                    </div>
-                                `;
-                            }).join('')}
-                    </div>
-                `;
+                const utangHtml = (state.utang || []).length
+                    ? (state.utang || []).map(u => {
+                        const isPaid = u.status === 'paid';
+                        return `
+                            <div class="bg-white rounded-2xl border border-cafe-border p-3.5 shadow-cafe flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="text-xs font-extrabold text-cafe-text truncate">${u.customerName || 'Customer'}</p>
+                                    <p class="text-[11px] text-cafe-muted tabular-nums">${new Date(u.date || Date.now()).toLocaleDateString()} ${u.dueDate ? '• Due: ' + u.dueDate : ''}</p>
+                                    <p class="text-xs font-extrabold mt-0.5 ${isPaid ? 'text-cafe-green' : 'text-cafe-red'} tabular-nums">${formatPeso(u.amount)} • ${isPaid ? 'Paid' : 'Unpaid'}</p>
+                                </div>
+                                <div class="flex items-center gap-1.5 shrink-0">
+                                    ${!isPaid ? `<button type="button" onclick="markUtangPaid('${u.id}')" class="px-2.5 py-1.5 rounded-xl bg-cafe-greenBg text-cafe-green text-[11px] font-extrabold tap-scale">Mark Paid</button>` : ''}
+                                    <button type="button" onclick="openReminderModal('${u.id}')" class="px-2.5 py-1.5 rounded-xl bg-cafe-bg border border-cafe-border text-[11px] font-bold tap-scale">Remind</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')
+                    : `<p class="text-xs text-cafe-muted bg-white rounded-2xl border border-cafe-border p-4 text-center">No Utang records yet.</p>`;
+                parts.push(`<div class="space-y-2"><h3 class="text-xs font-extrabold uppercase tracking-wider text-cafe-muted">Utang Records</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">${utangHtml}</div></div>`);
             }
 
             if (state.ledgerFilter === 'all' || state.ledgerFilter === 'expenses') {
-                html += `
-                    <div class="bg-white rounded-2xl border border-cafe-border p-4 shadow-cafe space-y-2.5">
-                        <h3 class="text-sm font-extrabold text-cafe-text">Recent Expenses (${state.expenses.length})</h3>
-                        ${state.expenses.length === 0
-                            ? `<p class="text-xs text-cafe-muted py-2">No expenses recorded yet.</p>`
-                            : state.expenses.slice(0, 15).map(ex => `
-                                <div class="flex items-center justify-between bg-cafe-bg rounded-xl px-3 py-2 border border-cafe-border text-xs">
-                                    <div>
-                                        <p class="font-bold text-cafe-text">${escapeHtml(ex.title)}</p>
-                                        <p class="text-[10px] text-cafe-muted">${new Date(ex.date).toLocaleDateString()} • From ${escapeHtml(ex.source || 'Cash')}</p>
-                                    </div>
-                                    <span class="font-extrabold text-cafe-red tabular-nums">-${formatPHP(ex.amount)}</span>
-                                </div>
-                            `).join('')}
-                    </div>
-                `;
+                const expHtml = (state.expenses || []).length
+                    ? (state.expenses || []).map(ex => `
+                        <div class="bg-white rounded-2xl border border-cafe-border p-3.5 shadow-cafe flex items-center justify-between gap-3">
+                            <div class="min-w-0">
+                                <p class="text-xs font-extrabold text-cafe-text truncate">${ex.title}</p>
+                                <p class="text-[11px] text-cafe-muted">${ex.source || 'Cash'} • ${new Date(ex.date || Date.now()).toLocaleDateString()}</p>
+                            </div>
+                            <span class="text-xs font-extrabold text-cafe-red tabular-nums shrink-0">-${formatPeso(ex.amount)}</span>
+                        </div>
+                    `).join('')
+                    : `<p class="text-xs text-cafe-muted bg-white rounded-2xl border border-cafe-border p-4 text-center">No expenses recorded yet.</p>`;
+                parts.push(`<div class="space-y-2"><h3 class="text-xs font-extrabold uppercase tracking-wider text-cafe-muted">Expenses</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">${expHtml}</div></div>`);
             }
 
             if (state.ledgerFilter === 'all') {
-                html += `
-                    <div class="bg-white rounded-2xl border border-cafe-border p-4 shadow-cafe space-y-2.5">
-                        <h3 class="text-sm font-extrabold text-cafe-text">Recent Sales (${state.sales.length})</h3>
-                        ${state.sales.length === 0
-                            ? `<p class="text-xs text-cafe-muted py-2">No sales recorded yet.</p>`
-                            : state.sales.slice(0, 15).map(s => `
-                                <div class="flex items-center justify-between gap-2 bg-cafe-bg rounded-xl px-3 py-2 border border-cafe-border text-xs">
-                                    <div class="min-w-0">
-                                        <p class="font-bold text-cafe-text truncate">${escapeHtml((s.items || []).map(i => `${i.name}×${i.qty}`).join(', '))}</p>
-                                        <p class="text-[10px] text-cafe-muted">${new Date(s.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • ${escapeHtml(s.paymentMethod)}${s.customerName ? ` (${escapeHtml(s.customerName)})` : ''}</p>
-                                    </div>
-                                    <div class="flex items-center gap-2 shrink-0">
-                                        <span class="font-extrabold text-cafe-green tabular-nums">${formatPHP(s.total)}</span>
-                                        <button type="button" onclick="voidSaleTransaction('${escapeJsSingle(s.id)}')" class="px-2.5 py-1 rounded-lg bg-cafe-redBg text-cafe-red text-[10px] font-extrabold hover:bg-red-200/70 tap-scale">
-                                            Void
-                                        </button>
-                                    </div>
-                                </div>
-                            `).join('')}
-                    </div>
-                `;
+                const salesHtml = (state.sales || []).length
+                    ? (state.sales || []).slice(0, 30).map(s => `
+                        <div class="bg-white rounded-2xl border border-cafe-border p-3.5 shadow-cafe flex items-center justify-between gap-3">
+                            <div class="min-w-0">
+                                <p class="text-xs font-extrabold text-cafe-text truncate">${s.paymentMethod || 'Cash'} ${s.customerName ? '• ' + s.customerName : ''}</p>
+                                <p class="text-[11px] text-cafe-muted tabular-nums">${new Date(s.date || Date.now()).toLocaleString()} • ${(s.items || []).length} item(s)</p>
+                                <p class="text-xs font-extrabold mt-0.5 ${s.voided ? 'line-through text-cafe-muted' : 'text-cafe-green'} tabular-nums">${formatPeso(s.total)} ${s.voided ? '(VOIDED)' : ''}</p>
+                            </div>
+                            ${!s.voided ? `<button type="button" onclick="voidSaleTransaction('${s.id}')" class="px-2.5 py-1.5 rounded-xl bg-cafe-redBg text-cafe-red text-[11px] font-extrabold tap-scale shrink-0">Void</button>` : ''}
+                        </div>
+                    `).join('')
+                    : `<p class="text-xs text-cafe-muted bg-white rounded-2xl border border-cafe-border p-4 text-center">No sales transactions yet.</p>`;
+                parts.push(`<div class="space-y-2"><h3 class="text-xs font-extrabold uppercase tracking-wider text-cafe-muted">Recent Sales</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">${salesHtml}</div></div>`);
             }
 
-            container.innerHTML = html;
+            container.innerHTML = parts.join('');
         }
 
-        function voidSaleTransaction(saleId) {
-            try {
-                const saleIdx = (state.sales || []).findIndex(s => s.id === saleId);
-                if (saleIdx === -1) {
-                    showToast('Transaction not found.');
-                    return;
-                }
-
-                const sale = state.sales[saleIdx];
-                (sale.items || []).forEach(it => {
-                    const prod = state.products.find(p => p.id === it.productId);
-                    if (prod) {
-                        prod.stock = (Number(prod.stock) || 0) + (Number(it.qty) || 0);
-                    }
-                });
-
-                state.utang = (state.utang || []).filter(u => u.saleId !== saleId);
-                state.sales.splice(saleIdx, 1);
-
-                saveState();
-                renderAll();
-                showToast(`Voided transaction (${formatPHP(sale.total)}) & restored stock.`);
-            } catch (err) {
-                console.error('Failed to void transaction:', err);
-                showToast('Could not void transaction.');
-            }
-        }
-
-        // ==================== GCASH TAB ====================
         function setGCashCapital() {
-            const input = document.getElementById('gcash-capital-input');
-            const val = parseFloat(input.value);
-            if (isNaN(val) || val < 0) {
-                showToast('Enter a valid GCash capital amount.');
-                return;
-            }
+            const inp = document.getElementById('gcash-capital-input');
+            if (!inp) return;
+            const val = parseFloat(inp.value);
+            if (isNaN(val) || val < 0) return;
             state.gcashCapital = val;
-            input.value = '';
+            inp.value = '';
             saveState();
+            broadcastTransactionSync(false);
             renderGCashTab();
             showToast('GCash capital updated!');
         }
 
         function addGCashEntry(e) {
             e.preventDefault();
-            const type = document.getElementById('gcash-tx-type').value;
-            const customer = document.getElementById('gcash-tx-customer').value.trim() || 'Walk-in';
-            const fee = Math.max(0, parseFloat(document.getElementById('gcash-tx-fee').value) || 0);
-            const amount = parseFloat(document.getElementById('gcash-tx-amount').value);
+            const typeEl = document.getElementById('gcash-tx-type');
+            const custEl = document.getElementById('gcash-tx-customer');
+            const feeEl = document.getElementById('gcash-tx-fee');
+            const amtEl = document.getElementById('gcash-tx-amount');
 
-            if (isNaN(amount) || amount <= 0) {
-                showToast('Enter a valid GCash amount.');
-                return;
-            }
+            const type = typeEl ? typeEl.value : 'cash_in';
+            const customer = custEl ? custEl.value.trim() : '';
+            const fee = Math.max(0, parseFloat(feeEl ? feeEl.value : '0') || 0);
+            const amount = parseFloat(amtEl ? amtEl.value : '0');
+            if (isNaN(amount) || amount <= 0) return;
 
             if (type === 'cash_in') {
                 state.gcashCapital = (Number(state.gcashCapital) || 0) + amount;
@@ -2884,17 +2636,19 @@
                 date: new Date().toISOString()
             });
 
-            document.getElementById('gcash-tx-customer').value = '';
-            document.getElementById('gcash-tx-fee').value = '';
-            document.getElementById('gcash-tx-amount').value = '';
+            if (custEl) custEl.value = '';
+            if (feeEl) feeEl.value = '';
+            if (amtEl) amtEl.value = '';
             saveState();
+            broadcastTransactionSync(false);
             renderGCashTab();
-            showToast('GCash entry recorded!');
+            showToast('GCash entry added!');
         }
 
         function clearGCashHistory() {
             state.gcashEntries = [];
             saveState();
+            broadcastTransactionSync(false);
             renderGCashTab();
             showToast('GCash history cleared.');
         }
@@ -2902,152 +2656,140 @@
         function renderGCashTab() {
             const capEl = document.getElementById('gcash-capital-display');
             const totalFeesEl = document.getElementById('gcash-total-fees');
-            const weekFeesEl = document.getElementById('gcash-weekly-fees');
-            const monthFeesEl = document.getElementById('gcash-monthly-fees');
-            const cashPoolEl = document.getElementById('gcash-cash-pool');
+            const weeklyFeesEl = document.getElementById('gcash-weekly-fees');
+            const monthlyFeesEl = document.getElementById('gcash-monthly-fees');
             const listEl = document.getElementById('gcash-entries-list');
-            if (!capEl || !listEl) return;
 
-            const now = new Date();
-            const weekAgo = new Date(now.getTime() - 7 * 86400000);
-            let totalFees = 0, weekFees = 0, monthFees = 0, cashPool = 0;
+            if (capEl) capEl.textContent = formatPeso(state.gcashCapital || 0);
 
-            state.gcashEntries.forEach(en => {
-                const f = Number(en.fee) || 0;
-                const amt = Number(en.amount) || 0;
-                const d = new Date(en.date);
+            const now = Date.now();
+            const weekMs = 7 * 24 * 60 * 60 * 1000;
+            const monthMs = 30 * 24 * 60 * 60 * 1000;
+            let totalFees = 0;
+            let weeklyFees = 0;
+            let monthlyFees = 0;
+
+            (state.gcashEntries || []).forEach(entry => {
+                const f = Number(entry.fee) || 0;
                 totalFees += f;
-                if (d >= weekAgo) weekFees += f;
-                if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) monthFees += f;
-                if (en.type === 'cash_in') cashPool += amt + f;
-                else cashPool -= amt;
+                const t = new Date(entry.date || Date.now()).getTime();
+                if (now - t <= weekMs) weeklyFees += f;
+                if (now - t <= monthMs) monthlyFees += f;
             });
 
-            capEl.textContent = formatPHP(state.gcashCapital);
-            if (totalFeesEl) totalFeesEl.textContent = formatPHP(totalFees);
-            if (weekFeesEl) weekFeesEl.textContent = formatPHP(weekFees);
-            if (monthFeesEl) monthFeesEl.textContent = formatPHP(monthFees);
-            if (cashPoolEl) cashPoolEl.textContent = formatPHP(cashPool);
+            if (totalFeesEl) totalFeesEl.textContent = formatPeso(totalFees);
+            if (weeklyFeesEl) weeklyFeesEl.textContent = formatPeso(weeklyFees);
+            if (monthlyFeesEl) monthlyFeesEl.textContent = formatPeso(monthlyFees);
 
-            if (state.gcashEntries.length === 0) {
-                listEl.innerHTML = `<div class="col-span-full bg-white rounded-2xl border border-cafe-border p-6 text-center text-xs text-cafe-muted">No GCash transactions yet.</div>`;
-                return;
+            if (listEl) {
+                if (!(state.gcashEntries || []).length) {
+                    listEl.innerHTML = `<div class="col-span-full bg-white rounded-2xl border border-cafe-border p-6 text-center text-xs text-cafe-muted">No GCash entries yet.</div>`;
+                } else {
+                    listEl.innerHTML = state.gcashEntries.map(entry => {
+                        const isIn = entry.type === 'cash_in';
+                        return `
+                            <div class="bg-white rounded-2xl border border-cafe-border p-3.5 shadow-cafe flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="text-xs font-extrabold text-cafe-text">${isIn ? 'Cash-In (+)' : 'Cash-Out (-)'} ${entry.customer ? '• ' + entry.customer : ''}</p>
+                                    <p class="text-[11px] text-cafe-muted">${new Date(entry.date || Date.now()).toLocaleString()} • Fee: ${formatPeso(entry.fee || 0)}</p>
+                                </div>
+                                <span class="text-xs font-extrabold tabular-nums ${isIn ? 'text-cafe-green' : 'text-[#007DFE]'}">${formatPeso(entry.amount)}</span>
+                            </div>
+                        `;
+                    }).join('');
+                }
             }
-
-            listEl.innerHTML = state.gcashEntries.map(en => {
-                const isIn = en.type === 'cash_in';
-                return `
-                    <div class="bg-white rounded-2xl border border-cafe-border p-3.5 shadow-cafe flex items-center justify-between">
-                        <div>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${isIn ? 'bg-cafe-greenBg text-cafe-green' : 'bg-cafe-redBg text-cafe-red'}">
-                                ${isIn ? 'Cash-In' : 'Cash-Out'}
-                            </span>
-                            <p class="text-xs font-extrabold text-cafe-text mt-1">${escapeHtml(en.customer)}</p>
-                            <p class="text-[10px] text-cafe-muted">${new Date(en.date).toLocaleString()} • Fee: ${formatPHP(en.fee)}</p>
-                        </div>
-                        <p class="text-sm font-extrabold tabular-nums ${isIn ? 'text-cafe-green' : 'text-cafe-red'}">
-                            ${isIn ? '+' : '-'}${formatPHP(en.amount)}
-                        </p>
-                    </div>
-                `;
-            }).join('');
         }
 
-        // ==================== REPORTS & SETTINGS ====================
         function renderReportsTab() {
             const todayStr = todayISO();
             const now = new Date();
+            const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-            const unpaidUtangTotal = state.utang
-                .filter(u => u.status !== 'paid')
-                .reduce((sum, u) => sum + (Number(u.total) || 0), 0);
+            const validSales = (state.sales || []).filter(s => s && !s.voided);
+            const unpaidUtang = (state.utang || []).filter(u => u.status !== 'paid');
+            const totalUnpaid = unpaidUtang.reduce((sum, u) => sum + (Number(u.amount) || 0), 0);
+            const dueCount = unpaidUtang.filter(u => u.dueDate && u.dueDate <= todayStr).length;
 
-            const dueCount = state.utang
-                .filter(u => u.status !== 'paid' && u.dueDate && u.dueDate <= todayStr)
-                .length;
+            let todaySales = 0;
+            let todayCost = 0;
+            let monthSales = 0;
+            let monthCost = 0;
+            let grossSales = 0;
+            let grossProfit = 0;
+            const soldQtyByProd = {};
 
-            let todaySales = 0, todayCost = 0;
-            let monthSales = 0, monthCost = 0;
-            let grossSales = 0, grossCost = 0;
-            const prodTotals = {};
+            validSales.forEach(s => {
+                const amt = Number(s.total) || 0;
+                grossSales += amt;
+                const dIso = (s.date || '').slice(0, 10);
+                const mStr = (s.date || '').slice(0, 7);
 
-            state.sales.forEach(s => {
-                const d = new Date(s.date);
-                const dISO = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                const total = Number(s.total) || 0;
-                const cost = Number(s.totalCost) || 0;
-
-                grossSales += total;
-                grossCost += cost;
-
-                if (dISO === todayStr) {
-                    todaySales += total;
-                    todayCost += cost;
-                }
-                if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
-                    monthSales += total;
-                    monthCost += cost;
-                }
-
+                let saleCost = 0;
                 (s.items || []).forEach(it => {
-                    if (!prodTotals[it.name]) prodTotals[it.name] = { qty: 0, revenue: 0 };
-                    prodTotals[it.name].qty += Number(it.qty) || 0;
-                    prodTotals[it.name].revenue += Number(it.subtotal) || 0;
+                    const q = Number(it.qty) || 0;
+                    const c = Number(it.cost) || 0;
+                    saleCost += q * c;
+                    if (it.productId) {
+                        soldQtyByProd[it.productId] = (soldQtyByProd[it.productId] || 0) + q;
+                    }
                 });
+                grossProfit += (amt - saleCost);
+
+                if (dIso === todayStr) {
+                    todaySales += amt;
+                    todayCost += saleCost;
+                }
+                if (mStr === curMonth) {
+                    monthSales += amt;
+                    monthCost += saleCost;
+                }
             });
 
-            let todayExpenses = 0, monthExpenses = 0, totalExpenses = 0;
-            state.expenses.forEach(ex => {
-                const d = new Date(ex.date);
-                const dISO = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            let todayExp = 0;
+            let monthExp = 0;
+            let totalExp = 0;
+            (state.expenses || []).forEach(ex => {
                 const amt = Number(ex.amount) || 0;
-                totalExpenses += amt;
-                if (dISO === todayStr) todayExpenses += amt;
-                if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) monthExpenses += amt;
+                totalExp += amt;
+                const dIso = (ex.date || '').slice(0, 10);
+                const mStr = (ex.date || '').slice(0, 7);
+                if (dIso === todayStr) todayExp += amt;
+                if (mStr === curMonth) monthExp += amt;
             });
 
-            const todayProfit = todaySales - todayCost - todayExpenses;
-            const monthlyProfit = monthSales - monthCost - monthExpenses;
-            const estGrossProfit = grossSales - grossCost;
+            const todayProfit = (todaySales - todayCost) - todayExp;
+            const monthlyProfit = (monthSales - monthCost) - monthExp;
 
-            const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-            setTxt('utang-total-unpaid', formatPHP(unpaidUtangTotal));
-            setTxt('utang-due-count', String(dueCount));
-            setTxt('expenses-today-total', formatPHP(todayExpenses));
-            setTxt('sales-today-total', formatPHP(todaySales));
-            setTxt('report-today-profit', formatPHP(todayProfit));
-            setTxt('report-monthly-profit', formatPHP(monthlyProfit));
-            setTxt('report-gross-sales', formatPHP(grossSales));
-            setTxt('report-gross-profit', formatPHP(estGrossProfit));
-            setTxt('report-total-expenses', formatPHP(totalExpenses));
+            const setText = (id, txt) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = txt;
+            };
 
-            const storeInput = document.getElementById('store-name-input');
-            if (storeInput && document.activeElement !== storeInput) {
-                storeInput.value = state.storeName;
-            }
+            setText('utang-total-unpaid', formatPeso(totalUnpaid));
+            setText('utang-due-count', String(dueCount));
+            setText('expenses-today-total', formatPeso(todayExp));
+            setText('sales-today-total', formatPeso(todaySales));
+            setText('report-today-profit', formatPeso(todayProfit));
+            setText('report-monthly-profit', formatPeso(monthlyProfit));
+            setText('report-gross-sales', formatPeso(grossSales));
+            setText('report-gross-profit', formatPeso(grossProfit));
+            setText('report-total-expenses', formatPeso(totalExp));
 
             const topList = document.getElementById('top-products-list');
             if (topList) {
-                const ranked = Object.entries(prodTotals).sort((a, b) => b[1].qty - a[1].qty).slice(0, 5);
-                if (ranked.length === 0) {
-                    topList.innerHTML = `<p class="text-xs text-cafe-muted">No sales recorded yet.</p>`;
+                const topEntries = Object.entries(soldQtyByProd)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5);
+                if (!topEntries.length) {
+                    topList.innerHTML = 'No sales recorded yet.';
                 } else {
-                    topList.innerHTML = ranked.map(([name, info], i) => `
-                        <div class="flex items-center justify-between bg-cafe-bg rounded-xl px-3 py-2 border border-cafe-border">
-                            <span class="font-bold text-cafe-text">${i + 1}. ${escapeHtml(name)}</span>
-                            <span class="font-extrabold text-cafe-green tabular-nums">${info.qty} sold • ${formatPHP(info.revenue)}</span>
-                        </div>
-                    `).join('');
+                    topList.innerHTML = topEntries.map(([pid, qty]) => {
+                        const prod = (state.products || []).find(p => p.id === pid);
+                        return `<div class="flex items-center justify-between py-1 border-b border-cafe-border/60 last:border-0"><span class="font-bold text-cafe-text">${prod ? prod.name : pid}</span><span class="font-extrabold text-cafe-green tabular-nums">${qty} sold</span></div>`;
+                    }).join('');
                 }
             }
-        }
-
-        function updateHeaderStoreName() {
-            const nameEl = document.getElementById('header-store-name');
-            if (nameEl) {
-                nameEl.textContent = state.storeName || 'Sari-Sari';
-            }
-            document.title = `${state.storeName || 'Sari-Sari Store'} — POS & Ledger`;
         }
 
         function renderAll() {
@@ -3056,428 +2798,18 @@
             try {
                 updateHeaderStoreName();
                 updateSyncStatusPill();
-                updateAlertBadges();
+                renderStockAlertsBadge();
+                renderHeroAndCategories();
+                renderPOSGrid();
                 renderCartUI();
-
-                if (state.activeTab === 'pos') {
-                    renderHeroBanner();
-                    renderPOSCategories();
-                    renderPOSGrid();
-                } else if (state.activeTab === 'stock') {
-                    renderStockTab();
-                } else if (state.activeTab === 'utang') {
-                    renderLedgerTab();
-                } else if (state.activeTab === 'gcash') {
-                    renderGCashTab();
-                } else if (state.activeTab === 'reports') {
-                    renderReportsTab();
-                }
+                renderStockTab();
+                renderLedgerTab();
+                renderGCashTab();
+                renderReportsTab();
             } finally {
                 isRendering = false;
             }
         }
-
-        function openStoreSettingsModal() {
-            const modal = document.getElementById('store-settings-modal');
-            const input = document.getElementById('modal-store-name-input');
-            if (input) input.value = state.storeName || '';
-            if (modal) modal.classList.remove('hidden');
-        }
-
-        function closeStoreSettingsModal() {
-            const modal = document.getElementById('store-settings-modal');
-            if (modal) modal.classList.add('hidden');
-        }
-
-        function saveStoreNameFromModal() {
-            const input = document.getElementById('modal-store-name-input');
-            if (!input) return;
-            const val = input.value.trim();
-            if (!val) {
-                showToast('Please enter a store name.');
-                return;
-            }
-            state.storeName = val;
-            saveState();
-            updateHeaderStoreName();
-            renderReportsTab();
-            showToast('Store name saved!');
-        }
-
-        function saveStoreName() {
-            const input = document.getElementById('store-name-input');
-            if (!input) return;
-            const val = input.value.trim();
-            if (!val) {
-                showToast('Please enter a store name.');
-                return;
-            }
-            state.storeName = val;
-            saveState();
-            updateHeaderStoreName();
-            showToast('Store name saved!');
-        }
-
-        function openCloudModal() {
-            updateSyncStatusPill();
-            const modal = document.getElementById('cloud-modal');
-            if (modal) modal.classList.remove('hidden');
-        }
-
-        function closeCloudModal() {
-            const modal = document.getElementById('cloud-modal');
-            if (modal) modal.classList.add('hidden');
-        }
-
-        function exportBackupJSON() {
-            try {
-                const dataStr = JSON.stringify(state, null, 2);
-                const blob = new Blob([dataStr], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `sari-sari-backup-${todayISO()}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                showToast('Backup JSON exported!');
-            } catch (err) {
-                showToast('Could not export backup.');
-            }
-        }
-
-        function importBackupJSON(e) {
-            const file = e.target.files && e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function (ev) {
-                try {
-                    const parsed = JSON.parse(ev.target.result);
-                    if (!parsed || typeof parsed !== 'object') {
-                        showToast('Invalid backup file.');
-                        return;
-                    }
-                    state = {
-                        ...defaultState(),
-                        ...parsed,
-                        products: Array.isArray(parsed.products) ? parsed.products : state.products,
-                        categories: Array.isArray(parsed.categories) ? parsed.categories : state.categories,
-                        paymentOptions: Array.isArray(parsed.paymentOptions) && parsed.paymentOptions.length ? parsed.paymentOptions : state.paymentOptions,
-                        cart: Array.isArray(parsed.cart) ? parsed.cart : [],
-                        sales: Array.isArray(parsed.sales) ? parsed.sales : [],
-                        utang: Array.isArray(parsed.utang) ? parsed.utang : [],
-                        expenses: Array.isArray(parsed.expenses) ? parsed.expenses : [],
-                        gcashEntries: Array.isArray(parsed.gcashEntries) ? parsed.gcashEntries : [],
-                        gcashCapital: Number(parsed.gcashCapital) || 0
-                    };
-                    saveState();
-                    renderAll();
-                    showToast('Backup imported successfully!');
-                } catch (err) {
-                    showToast('Error reading JSON backup.');
-                } finally {
-                    e.target.value = '';
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        function triggerResetToDefault(source = 'modal') {
-            const btn = document.getElementById('reset-default-btn-modal');
-            if (!btn) return;
-            if (btn.dataset.armed !== '1') {
-                btn.dataset.armed = '1';
-                const origText = btn.textContent;
-                btn.textContent = 'Tap Again to Reset';
-                clearTimeout(resetConfirmTimer);
-                resetConfirmTimer = setTimeout(() => {
-                    btn.dataset.armed = '0';
-                    btn.textContent = origText;
-                }, 3000);
-                return;
-            }
-            btn.dataset.armed = '0';
-            btn.textContent = 'Reset Default';
-            clearTimeout(resetConfirmTimer);
-            state = defaultState();
-            saveState();
-            closeStoreSettingsModal();
-            renderAll();
-            showToast('Reset to default catalog & state.');
-        }
-
-        function loadStarterCatalog() {
-            const existingIds = new Set(state.products.map(p => p.id));
-            const existingNames = new Set(state.products.map(p => (p.name || '').toLowerCase()));
-            let added = 0;
-            FULL_SARI_SARI_CATALOG.forEach(item => {
-                if (!existingIds.has(item.id) && !existingNames.has((item.name || '').toLowerCase())) {
-                    state.products.push({ ...item });
-                    ensureCategorySaved(item.category);
-                    added++;
-                }
-            });
-            saveState();
-            renderAll();
-            showToast(added > 0 ? `Loaded ${added} sari-sari items!` : 'All sari-sari items are already loaded.');
-        }
-
-        // ==================== BARCODE SCANNER ====================
-        let barcodeScanMode = 'pos';
-        let barcodeStream = null;
-        let barcodeRafId = null;
-        let barcodeDetector = null;
-        let zxingReader = null;
-        let zxingControls = null;
-        let zxingLoadPromise = null;
-        let hardwareBarcodeBuffer = '';
-        let hardwareBarcodeLastTime = 0;
-
-        function loadZXingLibrary() {
-            if (window.ZXingBrowser && window.ZXingBrowser.BrowserMultiFormatReader) {
-                return Promise.resolve(window.ZXingBrowser);
-            }
-            if (zxingLoadPromise) return zxingLoadPromise;
-            zxingLoadPromise = new Promise((resolve) => {
-                try {
-                    const script = document.createElement('script');
-                    script.src = 'https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/zxing-browser.min.js';
-                    script.async = true;
-                    script.onload = () => resolve(window.ZXingBrowser || null);
-                    script.onerror = () => resolve(null);
-                    document.head.appendChild(script);
-                } catch (e) {
-                    resolve(null);
-                }
-            });
-            return zxingLoadPromise;
-        }
-
-        async function openBarcodeScannerModal(mode = 'pos') {
-            barcodeScanMode = mode;
-            const modal = document.getElementById('barcode-scanner-modal');
-            const subEl = document.getElementById('barcode-scanner-subtitle');
-            const inputEl = document.getElementById('barcode-manual-input');
-            const fallbackEl = document.getElementById('barcode-camera-fallback');
-            const reasonEl = document.getElementById('barcode-fallback-reason');
-            if (!modal) return;
-
-            if (subEl) {
-                subEl.textContent = mode === 'product'
-                    ? 'Scan or enter barcode to fill Product Barcode'
-                    : 'Scan or enter barcode to add item to cart';
-            }
-            if (inputEl) inputEl.value = '';
-            if (reasonEl) reasonEl.textContent = 'Use a USB/Bluetooth scanner or enter barcode below.';
-            if (fallbackEl) fallbackEl.classList.add('hidden');
-
-            modal.classList.remove('hidden');
-            setTimeout(() => { if (inputEl) inputEl.focus(); }, 100);
-
-            await startBarcodeCameraLoop();
-        }
-
-        function closeBarcodeScannerModal() {
-            const modal = document.getElementById('barcode-scanner-modal');
-            if (modal) modal.classList.add('hidden');
-            stopBarcodeCameraLoop();
-        }
-
-        async function startBarcodeCameraLoop() {
-            stopBarcodeCameraLoop();
-            const video = document.getElementById('barcode-video');
-            const fallbackEl = document.getElementById('barcode-camera-fallback');
-            const reasonEl = document.getElementById('barcode-fallback-reason');
-
-            try {
-                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    if (reasonEl) reasonEl.textContent = 'Camera API unavailable in this browser/frame. Type or scan below.';
-                    if (fallbackEl) fallbackEl.classList.remove('hidden');
-                    return;
-                }
-
-                let stream = null;
-                try {
-                    stream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
-                        audio: false
-                    });
-                } catch (camErr) {
-                    stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                }
-
-                barcodeStream = stream;
-                if (video) {
-                    video.srcObject = barcodeStream;
-                    await video.play();
-                }
-
-                const hasNativeDetector = ('BarcodeDetector' in window);
-                if (hasNativeDetector) {
-                    try {
-                        barcodeDetector = new window.BarcodeDetector({
-                            formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'codabar', 'qr_code']
-                        });
-                    } catch (e) {
-                        try {
-                            barcodeDetector = new window.BarcodeDetector();
-                        } catch (e2) {
-                            barcodeDetector = null;
-                        }
-                    }
-                } else {
-                    barcodeDetector = null;
-                }
-
-                const zxing = await loadZXingLibrary();
-                if (!barcodeStream) return;
-
-                if (!barcodeDetector && zxing && zxing.BrowserMultiFormatReader && video) {
-                    try {
-                        zxingReader = new zxing.BrowserMultiFormatReader();
-                        zxingControls = await zxingReader.decodeFromVideoElement(video, (result) => {
-                            if (result && result.getText) {
-                                handleScannedBarcodeValue(String(result.getText()).trim());
-                            }
-                        });
-                        return;
-                    } catch (zxErr) {
-                        zxingReader = null;
-                        zxingControls = null;
-                    }
-                }
-
-                if (!barcodeDetector) {
-                    if (reasonEl) reasonEl.textContent = 'Browser has no built-in barcode decoder here. Type/scan barcode below.';
-                    if (fallbackEl) fallbackEl.classList.remove('hidden');
-                    return;
-                }
-
-                const tick = async () => {
-                    if (!barcodeStream) return;
-                    try {
-                        if (barcodeDetector && video && video.readyState >= 2) {
-                            const barcodes = await barcodeDetector.detect(video);
-                            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
-                                handleScannedBarcodeValue(String(barcodes[0].rawValue).trim());
-                                return;
-                            }
-                        }
-                    } catch (err) {}
-                    barcodeRafId = requestAnimationFrame(tick);
-                };
-                barcodeRafId = requestAnimationFrame(tick);
-            } catch (err) {
-                if (reasonEl) {
-                    reasonEl.textContent = (err && err.name === 'NotAllowedError')
-                        ? 'Camera permission denied. Allow camera or type/scan barcode below.'
-                        : 'Camera preview unavailable. Use a scanner or type barcode below.';
-                }
-                if (fallbackEl) fallbackEl.classList.remove('hidden');
-            }
-        }
-
-        function stopBarcodeCameraLoop() {
-            if (barcodeRafId) {
-                cancelAnimationFrame(barcodeRafId);
-                barcodeRafId = null;
-            }
-            if (zxingControls && typeof zxingControls.stop === 'function') {
-                try { zxingControls.stop(); } catch (e) {}
-            }
-            zxingControls = null;
-            if (zxingReader && typeof zxingReader.reset === 'function') {
-                try { zxingReader.reset(); } catch (e) {}
-            }
-            zxingReader = null;
-            if (barcodeStream) {
-                try {
-                    barcodeStream.getTracks().forEach(t => t.stop());
-                } catch (e) {}
-                barcodeStream = null;
-            }
-            const video = document.getElementById('barcode-video');
-            if (video) {
-                video.srcObject = null;
-            }
-        }
-
-        function handleScannedBarcodeValue(rawCode) {
-            const code = String(rawCode || '').trim();
-            if (!code) return;
-
-            if (barcodeScanMode === 'product') {
-                const prodBarcodeInput = document.getElementById('prod-barcode');
-                if (prodBarcodeInput) prodBarcodeInput.value = code;
-                closeBarcodeScannerModal();
-                showToast(`Barcode set: ${code}`);
-                return;
-            }
-
-            const matched = state.products.find(p =>
-                String(p.barcode || '').trim().toLowerCase() === code.toLowerCase() ||
-                String(p.id || '').trim().toLowerCase() === code.toLowerCase()
-            );
-
-            closeBarcodeScannerModal();
-
-            if (matched) {
-                if ((Number(matched.stock) || 0) > 0) {
-                    addToCart(matched.id);
-                    showToast(`Scanned: ${matched.name}`);
-                } else {
-                    showToast(`${matched.name} is out of stock.`);
-                }
-            } else {
-                const searchInput = document.getElementById('pos-search');
-                if (searchInput) {
-                    searchInput.value = code;
-                    renderPOSGrid();
-                }
-                showToast(`Barcode ${code} not found—searched in catalog.`);
-            }
-        }
-
-        function submitManualBarcode(e) {
-            e.preventDefault();
-            const input = document.getElementById('barcode-manual-input');
-            if (!input) return;
-            handleScannedBarcodeValue(input.value);
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closeProductModal();
-                closeCartModal();
-                closeReminderModal();
-                closeStoreSettingsModal();
-                closeCloudModal();
-                closeStockAlertsModal();
-                closeBarcodeScannerModal();
-                return;
-            }
-
-            const activeTag = (document.activeElement && document.activeElement.tagName) || '';
-            const isTypingField = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT';
-            if (isTypingField && document.activeElement.id !== 'barcode-manual-input') return;
-
-            const now = Date.now();
-            if (now - hardwareBarcodeLastTime > 120) {
-                hardwareBarcodeBuffer = '';
-            }
-            hardwareBarcodeLastTime = now;
-
-            if (e.key === 'Enter') {
-                if (hardwareBarcodeBuffer.length >= 4 && document.activeElement.id !== 'barcode-manual-input') {
-                    const scanned = hardwareBarcodeBuffer;
-                    hardwareBarcodeBuffer = '';
-                    handleScannedBarcodeValue(scanned);
-                }
-            } else if (e.key.length === 1) {
-                hardwareBarcodeBuffer += e.key;
-            }
-        });
 
         window.addEventListener('DOMContentLoaded', () => {
             loadState();
