@@ -511,7 +511,7 @@
                             <input id="prod-photo-file" type="file" accept="image/*" onchange="handleProductPhotoImport(event)" class="block w-full text-[11px] text-cafe-muted file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-[11px] file:font-extrabold file:bg-cafe-espresso file:text-white hover:file:bg-cafe-espressoDark cursor-pointer">
                         </div>
                         <div class="w-16 h-16 rounded-xl bg-white border border-cafe-border overflow-hidden flex items-center justify-center shrink-0">
-                            <img id="prod-photo-preview" src="" alt="Preview" class="hidden w-full h-full object-cover">
+                            <img id="prod-photo-preview" src="" alt="Preview" class="hidden w-full h-full object-contain">
                             <span id="prod-photo-placeholder" class="text-[10px] font-bold text-cafe-muted text-center px-1">No Photo</span>
                         </div>
                     </div>
@@ -1073,8 +1073,8 @@
         ];
 
         function getCloudRoomKey(roomCode) {
-            const clean = String(roomCode || state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase() || 'SARI-SYNC-DEFAULT';
-            return `SARISARI_${clean.replace(/[^A-Z0-9_-]/g, '_')}`;
+            const clean = String(roomCode || state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '_') || 'SARI_SYNC_DEFAULT';
+            return `SARISARI_${clean}`;
         }
 
         async function pushCloudRoomTransactions(roomCode) {
@@ -1087,8 +1087,8 @@
             };
             const encoded = encodeURIComponent(JSON.stringify(payload));
             try {
-                await fetch(`${CLOUD_SYNC_ENDPOINTS[0]}${key}/${encoded}`, { method: 'POST', mode: 'cors' });
-                return true;
+                const res = await fetch(`${CLOUD_SYNC_ENDPOINTS[0]}${key}/${encoded}`, { method: 'POST', mode: 'cors' });
+                return Boolean(res && res.ok);
             } catch (e) {
                 return false;
             }
@@ -1135,13 +1135,22 @@
                 if (syncBroadcastChannel) {
                     syncBroadcastChannel.postMessage(payload);
                 }
-                pushCloudRoomTransactions(roomCode).catch(() => {});
+                pushCloudRoomTransactions(roomCode)
+                    .then((ok) => {
+                        state.lastSyncedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                        writeStorageSafe(STORAGE_KEY, JSON.stringify(state));
+                        updateSyncStatusPill();
+                        if (showFeedback) {
+                            showToast(ok ? `Synced products, photos & tx (${roomCode})` : `Saved locally & queued for ${roomCode}`);
+                        }
+                    })
+                    .catch(() => {
+                        updateSyncStatusPill();
+                        if (showFeedback) showToast(`Saved locally (${roomCode})`);
+                    });
                 state.lastSyncedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 writeStorageSafe(STORAGE_KEY, JSON.stringify(state));
                 updateSyncStatusPill();
-                if (showFeedback) {
-                    showToast(`Synced transactions (${roomCode})`);
-                }
             } catch (err) {
                 if (showFeedback) showToast('Sync completed locally.');
             }
@@ -1453,6 +1462,8 @@
 
         function getTransactionBundle() {
             return {
+                products: Array.isArray(state.products) ? state.products : [],
+                categories: Array.isArray(state.categories) ? state.categories : [],
                 sales: Array.isArray(state.sales) ? state.sales : [],
                 utang: Array.isArray(state.utang) ? state.utang : [],
                 expenses: Array.isArray(state.expenses) ? state.expenses : [],
@@ -1485,14 +1496,62 @@
             });
         }
 
+        function mergeProductsById(localProds, incomingProds) {
+            const map = new Map();
+            (Array.isArray(localProds) ? localProds : []).forEach(p => {
+                if (p && p.id) map.set(p.id, { ...p });
+            });
+            let changed = false;
+            (Array.isArray(incomingProds) ? incomingProds : []).forEach(inc => {
+                if (!inc || !inc.id) return;
+                const cur = map.get(inc.id);
+                if (!cur) {
+                    map.set(inc.id, { ...inc });
+                    changed = true;
+                } else {
+                    const merged = {
+                        ...cur,
+                        name: inc.name || cur.name,
+                        category: inc.category || cur.category,
+                        barcode: inc.barcode || cur.barcode || '',
+                        price: typeof inc.price === 'number' ? inc.price : cur.price,
+                        cost: typeof inc.cost === 'number' ? inc.cost : cur.cost,
+                        stock: typeof inc.stock === 'number' ? inc.stock : cur.stock,
+                        lowStockThreshold: typeof inc.lowStockThreshold === 'number' ? inc.lowStockThreshold : cur.lowStockThreshold,
+                        imageData: inc.imageData || cur.imageData || '',
+                        imageUrl: inc.imageUrl || cur.imageUrl || ''
+                    };
+                    if (
+                        merged.imageData !== (cur.imageData || '') ||
+                        merged.imageUrl !== (cur.imageUrl || '') ||
+                        merged.stock !== cur.stock ||
+                        merged.price !== cur.price ||
+                        merged.name !== cur.name
+                    ) {
+                        changed = true;
+                    }
+                    map.set(inc.id, merged);
+                }
+            });
+            return { products: Array.from(map.values()), changed };
+        }
+
         function applyIncomingTransactionBundle(bundle, roomCode) {
             if (!bundle || typeof bundle !== 'object') return false;
-            if (roomCode && state.syncRoomCode && roomCode !== state.syncRoomCode) return false;
+            const incRoom = String(roomCode || '').trim().toUpperCase();
+            const curRoom = String(state.syncRoomCode || 'SARI-SYNC-DEFAULT').trim().toUpperCase();
+            if (incRoom && curRoom && incRoom !== curRoom) return false;
 
             const prevSalesLen = state.sales.length;
             const prevUtangLen = state.utang.length;
             const prevExpLen = state.expenses.length;
             const prevGcLen = state.gcashEntries.length;
+
+            const prodMerge = mergeProductsById(state.products, bundle.products);
+            state.products = prodMerge.products;
+            if (Array.isArray(bundle.categories) && bundle.categories.length) {
+                state.categories = Array.from(new Set([...(state.categories || []), ...bundle.categories]));
+            }
 
             state.sales = mergeTransactionListById(state.sales, bundle.sales);
             state.utang = mergeTransactionListById(state.utang, bundle.utang);
@@ -1503,6 +1562,7 @@
             }
 
             const changed =
+                prodMerge.changed ||
                 state.sales.length !== prevSalesLen ||
                 state.utang.length !== prevUtangLen ||
                 state.expenses.length !== prevExpLen ||
@@ -1799,7 +1859,7 @@
                 }
                 if (heroThumb) {
                     const imgSrc = topProd.imageData || topProd.imageUrl || buildProductIllustrationDataUrl(topProd);
-                    heroThumb.innerHTML = `<img src="${imgSrc}" alt="${topProd.name}" onerror="handleImgError(this, '${topProd.id}')" class="w-full h-full object-cover">`;
+                    heroThumb.innerHTML = `<img src="${imgSrc}" alt="${topProd.name}" onerror="handleImgError(this, '${topProd.id}')" class="w-full h-full object-contain">`;
                 }
             }
 
@@ -1877,7 +1937,7 @@
                         <button type="button" onclick="openProductModal('${prod.id}')" aria-label="Edit ${prod.name}" class="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-white/90 border border-cafe-border text-cafe-text text-xs font-extrabold flex items-center justify-center shadow-sm hover:bg-cafe-bg tap-scale">✎</button>
                         <div onclick="addToCart('${prod.id}')" class="cursor-pointer space-y-2">
                             <div class="w-full h-28 rounded-xl bg-cafe-bg overflow-hidden flex items-center justify-center">
-                                <img src="${imgSrc}" alt="${prod.name}" loading="lazy" onerror="handleImgError(this, '${prod.id}')" class="w-full h-full object-cover">
+                                <img src="${imgSrc}" alt="${prod.name}" loading="lazy" onerror="handleImgError(this, '${prod.id}')" class="w-full h-full object-contain">
                             </div>
                             <div>
                                 <p class="text-xs font-extrabold text-cafe-text line-clamp-2 leading-snug pr-5">${prod.name}</p>
@@ -2182,117 +2242,6 @@
             state.utang = (state.utang || []).filter(u => u.saleId !== saleId);
             saveState();
             broadcastTransactionSync(false);
-            renderAll();
-            showToast('Transaction voided & stock restored.');
-        }
-
-        function openProductModal(productId = null) {
-            const modal = document.getElementById('product-modal');
-            const title = document.getElementById('product-modal-title');
-            const delBtn = document.getElementById('prod-delete-btn');
-            if (!modal) return;
-
-            const prod = productId ? (state.products || []).find(p => p.id === productId) : null;
-            document.getElementById('prod-id').value = prod ? prod.id : '';
-            document.getElementById('prod-name').value = prod ? (prod.name || '') : '';
-            document.getElementById('prod-barcode').value = prod ? (prod.barcode || '') : '';
-            document.getElementById('prod-price').value = prod ? (Number(prod.price) || 0) : '';
-            document.getElementById('prod-cost').value = prod ? (Number(prod.cost) || 0) : '';
-            document.getElementById('prod-low-stock').value = prod && typeof prod.lowStockThreshold === 'number' ? prod.lowStockThreshold : '';
-            document.getElementById('prod-image-data').value = prod ? (prod.imageData || '') : '';
-            document.getElementById('prod-image-url').value = prod ? (prod.imageUrl || '') : '';
-
-            updateProductPhotoPreview(prod ? (prod.imageData || prod.imageUrl || '') : '');
-
-            if (title) title.textContent = prod ? 'Edit Product' : 'Add Product';
-            if (delBtn) delBtn.classList.toggle('hidden', !prod);
-
-            modal.classList.remove('hidden');
-        }
-
-        function closeProductModal() {
-            const modal = document.getElementById('product-modal');
-            if (modal) modal.classList.add('hidden');
-        }
-
-        function updateProductPhotoPreview(src) {
-            const img = document.getElementById('prod-photo-preview');
-            const ph = document.getElementById('prod-photo-placeholder');
-            if (!img || !ph) return;
-            if (src) {
-                img.src = src;
-                img.classList.remove('hidden');
-                ph.classList.add('hidden');
-            } else {
-                img.src = '';
-                img.classList.add('hidden');
-                ph.classList.remove('hidden');
-            }
-        }
-
-        function handleProductPhotoImport(e) {
-            const file = e.target.files && e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function (ev) {
-                const dataUrl = String(ev.target.result || '');
-                document.getElementById('prod-image-data').value = dataUrl;
-                updateProductPhotoPreview(dataUrl);
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function handleProductImageUrlChange() {
-            const url = document.getElementById('prod-image-url').value.trim();
-            const dataUrl = document.getElementById('prod-image-data').value.trim();
-            updateProductPhotoPreview(dataUrl || url);
-        }
-
-        function saveProduct(e) {
-            e.preventDefault();
-            const idVal = document.getElementById('prod-id').value.trim();
-            const nameVal = document.getElementById('prod-name').value.trim();
-            if (!nameVal) return;
-
-            const barcodeVal = document.getElementById('prod-barcode').value.trim();
-            const priceVal = Math.max(0, parseFloat(document.getElementById('prod-price').value) || 0);
-            const costVal = Math.max(0, parseFloat(document.getElementById('prod-cost').value) || 0);
-            const lowRaw = document.getElementById('prod-low-stock').value;
-            const lowVal = lowRaw === '' ? undefined : Math.max(0, parseInt(lowRaw, 10) || 0);
-            const imageDataVal = document.getElementById('prod-image-data').value.trim();
-            const imageUrlVal = document.getElementById('prod-image-url').value.trim();
-
-            if (idVal) {
-                const prod = (state.products || []).find(p => p.id === idVal);
-                if (prod) {
-                    prod.name = nameVal;
-                    prod.barcode = barcodeVal;
-                    prod.price = priceVal;
-                    prod.cost = costVal;
-                    prod.lowStockThreshold = lowVal;
-                    prod.imageData = imageDataVal;
-                    prod.imageUrl = imageUrlVal;
-                }
-                showToast('Product updated!');
-            } else {
-                const cat = state.selectedCategory && state.selectedCategory !== 'All' ? state.selectedCategory : 'Drinks';
-                ensureCategorySaved(cat);
-                state.products.unshift({
-                    id: 'prod_' + Date.now(),
-                    name: nameVal,
-                    barcode: barcodeVal,
-                    category: cat,
-                    stock: 0,
-                    price: priceVal,
-                    cost: costVal,
-                    lowStockThreshold: lowVal,
-                    imageData: imageDataVal,
-                    imageUrl: imageUrlVal
-                });
-                showToast('Product added!');
-            }
-
-            saveState();
             closeProductModal();
             renderAll();
         }
