@@ -17,13 +17,13 @@
                     },
                     colors: {
                         cafe: {
-                            bg: '#FAF5F0',
-                            surface: '#FFFFFF',
+                            bg: 'var(--cafe-bg, #FAF5F0)',
+                            surface: 'var(--cafe-surface, #FFFFFF)',
                             espresso: 'var(--adaptive-primary, #4A2C18)',
                             espressoDark: 'var(--adaptive-dark, #2E190B)',
-                            text: '#1C1410',
-                            muted: '#8A7968',
-                            border: '#EFE7DE',
+                            text: 'var(--cafe-text, #1C1410)',
+                            muted: 'var(--cafe-muted, #8A7968)',
+                            border: 'var(--cafe-border, #EFE7DE)',
                             green: '#15803D',
                             greenBg: '#DCFCE7',
                             red: '#DC2626',
@@ -48,6 +48,35 @@
             --adaptive-light: #7A8450;
             --adaptive-soft: #F4F2EC;
             --adaptive-glow: rgba(54, 62, 24, 0.35);
+            --cafe-bg: #FAF5F0;
+            --cafe-surface: #FFFFFF;
+            --cafe-text: #1C1410;
+            --cafe-muted: #8A7968;
+            --cafe-border: #EFE7DE;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --cafe-bg: #111315;
+                --cafe-surface: #1A1D21;
+                --cafe-text: #F3F4F6;
+                --cafe-muted: #9CA3AF;
+                --cafe-border: #2B3038;
+            }
+        }
+        .bg-white {
+            background-color: var(--cafe-surface) !important;
+        }
+        .text-cafe-text {
+            color: var(--cafe-text) !important;
+        }
+        .text-cafe-muted {
+            color: var(--cafe-muted) !important;
+        }
+        .border-cafe-border {
+            border-color: var(--cafe-border) !important;
+        }
+        .bg-cafe-bg {
+            background-color: var(--cafe-bg) !important;
         }
         .adaptive-bg-primary {
             background-color: var(--adaptive-primary) !important;
@@ -2398,7 +2427,14 @@
                 g: clampColorChannel(primaryRgb.g * 0.72 + 255 * 0.28),
                 b: clampColorChannel(primaryRgb.b * 0.72 + 255 * 0.28)
             };
-            const softBgRgb = mixRgbWithWhite(primaryRgb.r, primaryRgb.g, primaryRgb.b, 0.93);
+            const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const softBgRgb = isDarkMode
+                ? {
+                    r: clampColorChannel(17 + primaryRgb.r * 0.08),
+                    g: clampColorChannel(19 + primaryRgb.g * 0.08),
+                    b: clampColorChannel(22 + primaryRgb.b * 0.08)
+                }
+                : mixRgbWithWhite(primaryRgb.r, primaryRgb.g, primaryRgb.b, 0.93);
 
             const primaryHex = rgbToHex(primaryRgb.r, primaryRgb.g, primaryRgb.b);
             const darkHex = rgbToHex(darkRgb.r, darkRgb.g, darkRgb.b);
@@ -3579,6 +3615,18 @@
         window.addEventListener('DOMContentLoaded', () => {
             loadState();
             initTransactionSyncListeners();
+            if (window.matchMedia) {
+                const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+                const handleThemeChange = () => {
+                    lastAdaptiveColorKey = '';
+                    renderAll();
+                };
+                if (mediaQuery.addEventListener) {
+                    mediaQuery.addEventListener('change', handleThemeChange);
+                } else if (mediaQuery.addListener) {
+                    mediaQuery.addListener(handleThemeChange);
+                }
+            }
             switchTab(state.activeTab || 'pos');
             if (state.autoSyncEnabled !== false) {
                 pullRoomTransactionsIfNewer();
