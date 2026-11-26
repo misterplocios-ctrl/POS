@@ -731,32 +731,28 @@
                 <p id="sync-device-status" class="text-[10px] text-cafe-muted tabular-nums">Use the same Room Code on other devices or transfer via Sync File.</p>
             </div>
             <div class="flex justify-end">
-                <button type="button" onclick="closeCloudModal()" class="px-4 py-2 rounded-full bg-cafe-espresso text-white text-xs font-extrabold tap-scale">
-                    Got It
+                <button type="button" onclick="closeStockAlertsModal()" class="px-4 py-2 rounded-full bg-[#363E18] text-white text-xs font-extrabold tap-scale">
+                    Close
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- ==================== MODAL: LOW & OUT OF STOCK NOTIFICATIONS ==================== -->
-    <div id="stock-alerts-modal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-3xl p-5 shadow-float space-y-4 max-h-[88vh] overflow-y-auto animate-fade-up">
-            <div class="flex items-center justify-between border-b border-cafe-border pb-3">
-                <div>
-                    <h3 class="text-base font-extrabold text-cafe-text">Stock Alerts</h3>
-                    <p id="stock-alerts-subtitle" class="text-xs text-cafe-muted">Custom low stock &amp; out of stock items</p>
-                </div>
-                <button type="button" onclick="closeStockAlertsModal()" class="text-cafe-muted hover:text-cafe-text text-lg font-bold px-2">✕</button>
+    <!-- ==================== MODAL: CONFIRM VOID TRANSACTION ==================== -->
+    <div id="void-confirm-modal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-float space-y-4 animate-fade-up">
+            <div class="space-y-1">
+                <h3 class="text-base font-extrabold text-cafe-text">Confirm Void Transaction?</h3>
+                <p id="void-confirm-details" class="text-xs text-cafe-muted leading-relaxed">
+                    Are you sure you want to void this sale? Stock of sold items will be restored and the amount will be removed from sales/profit totals.
+                </p>
             </div>
-
-            <div id="stock-alerts-list" class="space-y-2.5"></div>
-
-            <div class="flex items-center justify-between pt-2 border-t border-cafe-border">
-                <button type="button" onclick="closeStockAlertsModal(); switchTab('stock');" class="text-xs font-extrabold text-[#363E18] hover:underline">
-                    Open Full Stock Tab →
+            <div class="flex items-center justify-end gap-2 pt-2 border-t border-cafe-border">
+                <button type="button" onclick="cancelVoidSale()" class="px-4 py-2 rounded-full bg-cafe-bg border border-cafe-border text-cafe-text text-xs font-bold tap-scale">
+                    Cancel
                 </button>
-                <button type="button" onclick="closeStockAlertsModal()" class="px-4 py-2 rounded-full bg-[#363E18] text-white text-xs font-extrabold tap-scale">
-                    Close
+                <button type="button" id="confirm-void-action-btn" onclick="confirmVoidSale()" class="px-4 py-2 rounded-full bg-cafe-red text-white text-xs font-extrabold tap-scale">
+                    Yes, Void Sale
                 </button>
             </div>
         </div>
@@ -1151,6 +1147,7 @@
         let barcodeScanTimer = null;
         let longPressTimer = null;
         let longPressTriggered = false;
+        let pendingVoidSaleId = '';
         const CLOUD_SYNC_ENDPOINTS = [
             'https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/',
             'https://kvdb.io/'
@@ -3257,6 +3254,32 @@
                 return;
             }
 
+            pendingVoidSaleId = saleId;
+            const modal = document.getElementById('void-confirm-modal');
+            const detailsEl = document.getElementById('void-confirm-details');
+            if (detailsEl) {
+                const itemsText = (sale.items || []).map(i => `${i.name} x${i.qty}`).join(', ');
+                detailsEl.textContent = `Void ${sale.paymentMethod || 'Cash'} sale (${formatPeso(sale.total)})${itemsText ? ` — ${itemsText}` : ''}? Stock will be returned and totals will be updated.`;
+            }
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function cancelVoidSale() {
+            pendingVoidSaleId = '';
+            const modal = document.getElementById('void-confirm-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function confirmVoidSale() {
+            const saleId = pendingVoidSaleId;
+            cancelVoidSale();
+            if (!saleId) return;
+
+            const sale = (state.sales || []).find(s => s && s.id === saleId);
+            if (!sale || sale.voided) return;
+
             sale.voided = true;
             sale.voidedAt = new Date().toISOString();
 
@@ -3417,10 +3440,11 @@
                 showToast('Enter a valid amount.');
                 return;
             }
+            // Apply cash-in/cash-out plus fee directly to GCash capital
             if (type === 'cash_in') {
-                state.gcashCapital = (Number(state.gcashCapital) || 0) + amount;
+                state.gcashCapital = (Number(state.gcashCapital) || 0) + amount + fee;
             } else {
-                state.gcashCapital = (Number(state.gcashCapital) || 0) - amount;
+                state.gcashCapital = (Number(state.gcashCapital) || 0) - amount + fee;
             }
             state.gcashEntries.unshift({
                 id: 'gc_' + Date.now(),
@@ -3436,15 +3460,40 @@
             saveState();
             broadcastTransactionSync(false);
             renderGCashTab();
-            showToast('GCash entry saved!');
+            showToast(fee > 0 ? `GCash entry & +${formatPeso(fee)} fee added to capital!` : 'GCash entry saved!');
         }
 
         function clearGCashHistory() {
+            const totalFeesToRemove = (state.gcashEntries || []).reduce((sum, en) => sum + (Number(en?.fee) || 0), 0);
+            state.gcashCapital = (Number(state.gcashCapital) || 0) - totalFeesToRemove;
             state.gcashEntries = [];
             saveState();
             broadcastTransactionSync(false);
             renderGCashTab();
             showToast('GCash history cleared.');
+        }
+
+        function deleteGCashEntry(entryId) {
+            if (!entryId) return;
+            const idx = (state.gcashEntries || []).findIndex(en => en && en.id === entryId);
+            if (idx === -1) return;
+
+            const entry = state.gcashEntries[idx];
+            const amt = Number(entry.amount) || 0;
+            const fee = Number(entry.fee) || 0;
+
+            // Reverse both amount and fee impact from capital
+            if (entry.type === 'cash_in') {
+                state.gcashCapital = (Number(state.gcashCapital) || 0) - amt - fee;
+            } else if (entry.type === 'cash_out') {
+                state.gcashCapital = (Number(state.gcashCapital) || 0) + amt - fee;
+            }
+
+            state.gcashEntries.splice(idx, 1);
+            saveState();
+            broadcastTransactionSync(false);
+            renderGCashTab();
+            showToast('GCash entry deleted!');
         }
 
         function renderGCashTab() {
@@ -3499,7 +3548,10 @@
                             <p class="text-xs font-extrabold text-cafe-text mt-1">${en.customer || 'Walk-in'}</p>
                             <p class="text-[10px] text-cafe-muted">Fee: ${formatPeso(en.fee || 0)} • ${(en.date || '').slice(0, 10)}</p>
                         </div>
-                        <span class="text-sm font-extrabold ${isIn ? 'text-cafe-green' : 'text-cafe-red'} tabular-nums">${isIn ? '+' : '-'}${formatPeso(en.amount)}</span>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="text-sm font-extrabold ${isIn ? 'text-cafe-green' : 'text-cafe-red'} tabular-nums">${isIn ? '+' : '-'}${formatPeso(en.amount)}</span>
+                            <button type="button" onclick="deleteGCashEntry('${en.id}')" title="Delete Entry" aria-label="Delete GCash Entry" class="px-2.5 py-1 rounded-full bg-cafe-redBg text-cafe-red text-[10px] font-extrabold tap-scale">✕</button>
+                        </div>
                     </div>
                 `;
             }).join('');
