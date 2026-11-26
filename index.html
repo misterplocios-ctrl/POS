@@ -2,7 +2,7 @@
 <html lang="en" class="antialiased selection:bg-[#4A2C18] selection:text-white">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sari-Sari POS &amp; Ledger</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -131,6 +131,14 @@
             content-visibility: auto;
             contain-intrinsic-size: 220px;
         }
+        /* Prevent iOS/Android browser auto-zoom when tapping inputs */
+        @media (max-width: 639px) {
+            input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+            select,
+            textarea {
+                font-size: 16px !important;
+            }
+        }
     </style>
 </head>
 <body class="text-cafe-text min-h-screen pb-24 lg:pb-8 transition-colors duration-500" style="background-color: var(--adaptive-soft, #F4F2EC);">
@@ -139,30 +147,34 @@
     <header class="w-full max-w-7xl mx-auto pt-4 pb-2 px-4 sm:px-6 relative">
         <div class="flex items-center justify-between">
             <button type="button" onclick="openStoreSettingsModal()" aria-label="Store Settings" title="Store Settings" class="w-10 h-10 rounded-full flex items-center justify-center text-cafe-text hover:bg-black/5 tap-scale text-lg">
-                ⚙
+                ⚙️
             </button>
+            <h1 id="header-store-name" class="text-lg sm:text-xl font-extrabold tracking-tight text-cafe-text truncate max-w-[60%]">
+                Sari-Sari
+            </h1>
+            <button type="button" onclick="openStockAlertsModal()" aria-label="Stock Alerts" title="Stock Alerts" class="relative w-10 h-10 rounded-full flex items-center justify-center text-cafe-text hover:bg-black/5 tap-scale text-lg">
+                🔔
+                <span id="top-alert-badge" class="hidden absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-cafe-red text-white text-[10px] font-extrabold flex items-center justify-center tabular-nums">0</span>
+            </button>
+        </div>
 
-            <div class="flex flex-col items-center justify-center text-center">
-                <div class="flex items-center justify-center gap-1.5">
-                    <span id="header-store-icon" class="text-base leading-none">🏪</span>
-                    <h1 id="header-store-name" class="text-lg sm:text-xl font-extrabold tracking-tight text-cafe-text">
-                        Sari-Sari
-                    </h1>
+        <!-- ==================== MODAL: CONFIRM DELETE GCASH ENTRY ==================== -->
+        <div id="gcash-delete-confirm-modal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+            <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-float space-y-4 animate-fade-up">
+                <div class="space-y-1">
+                    <h3 class="text-base font-extrabold text-cafe-text">Confirm Delete GCash Entry?</h3>
+                    <p id="gcash-delete-confirm-details" class="text-xs text-cafe-muted leading-relaxed">
+                        Are you sure you want to delete this GCash entry? Its amount and fee impact will be reversed from GCash Capital.
+                    </p>
                 </div>
-                <p class="text-[10px] font-semibold tracking-[0.18em] uppercase text-cafe-muted mt-0.5">
-                    — STORE &amp; POS —
-                </p>
-            </div>
-
-            <div class="flex items-center gap-2">
-                <button type="button" onclick="openStockAlertsModal()" aria-label="Low & Out of Stock Alerts" class="relative w-9 h-9 rounded-full flex items-center justify-center text-cafe-text hover:bg-black/5 tap-scale text-base">
-                    🔔
-                    <span id="top-alert-badge" class="hidden -top-0.5 -right-0.5 absolute min-w-[18px] h-[18px] px-1 rounded-full bg-cafe-red text-white text-[10px] font-extrabold flex items-center justify-center tabular-nums">0</span>
-                </button>
-                <button type="button" onclick="openCartModal()" aria-label="Open Cart" class="relative w-9 h-9 rounded-full flex items-center justify-center text-cafe-text hover:bg-black/5 tap-scale text-base">
-                    🛒
-                    <span id="top-cart-badge" class="hidden -top-0.5 -right-0.5 absolute min-w-[18px] h-[18px] px-1 rounded-full adaptive-bg-primary text-white text-[10px] font-extrabold flex items-center justify-center tabular-nums">0</span>
-                </button>
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-cafe-border">
+                    <button type="button" onclick="cancelDeleteGCashEntry()" class="px-4 py-2 rounded-full bg-cafe-bg border border-cafe-border text-cafe-text text-xs font-bold tap-scale">
+                        Cancel
+                    </button>
+                    <button type="button" onclick="confirmDeleteGCashEntry()" class="px-4 py-2 rounded-full bg-cafe-red text-white text-xs font-extrabold tap-scale">
+                        Yes, Delete Entry
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -1177,6 +1189,7 @@
         let longPressTimer = null;
         let longPressTriggered = false;
         let pendingVoidSaleId = '';
+        let pendingDeleteGCashEntryId = '';
         const CLOUD_SYNC_ENDPOINTS = [
             'https://keyvalue.immanuel.co/api/KeyVal/UpdateValue/',
             'https://kvdb.io/'
@@ -3511,6 +3524,34 @@
 
         function deleteGCashEntry(entryId) {
             if (!entryId) return;
+            const entry = (state.gcashEntries || []).find(en => en && en.id === entryId);
+            if (!entry) return;
+
+            pendingDeleteGCashEntryId = entryId;
+            const modal = document.getElementById('gcash-delete-confirm-modal');
+            const detailsEl = document.getElementById('gcash-delete-confirm-details');
+            if (detailsEl) {
+                const typeLabel = entry.type === 'cash_in' ? 'Cash-In' : 'Cash-Out';
+                const custLabel = entry.customer || 'Walk-in';
+                const feeText = (Number(entry.fee) || 0) > 0 ? ` (Fee: ${formatPeso(entry.fee)})` : '';
+                detailsEl.textContent = `Delete ${typeLabel} for ${custLabel} (${formatPeso(entry.amount)}${feeText})? Its capital and fee effect will be reversed.`;
+            }
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function cancelDeleteGCashEntry() {
+            pendingDeleteGCashEntryId = '';
+            const modal = document.getElementById('gcash-delete-confirm-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function confirmDeleteGCashEntry() {
+            const entryId = pendingDeleteGCashEntryId;
+            cancelDeleteGCashEntry();
+            if (!entryId) return;
+
             const idx = (state.gcashEntries || []).findIndex(en => en && en.id === entryId);
             if (idx === -1) return;
 
