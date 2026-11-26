@@ -161,6 +161,9 @@
                     <input id="pos-search" type="text" oninput="schedulePOSRender()" placeholder="Search snacks, drinks, goods &amp; more..." class="w-full bg-white border border-cafe-border/80 rounded-full pl-10 pr-9 py-2.5 text-xs sm:text-sm text-cafe-text placeholder:text-cafe-muted/75 focus:outline-none focus:border-[#363E18] shadow-sm">
                     <button type="button" id="pos-clear-search" onclick="clearPOSSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-cafe-muted hover:text-cafe-text px-1.5 py-0.5">✕</button>
                 </div>
+                <button type="button" onclick="openBarcodeScannerModal('pos')" aria-label="Scan Barcode" title="Scan Barcode" class="w-10 h-10 rounded-full bg-white border border-cafe-border/80 text-cafe-text hover:bg-black/5 flex items-center justify-center shadow-sm tap-scale text-sm shrink-0">
+                    📷
+                </button>
             </div>
 
             <!-- Laptop/Desktop Split Layout: Product Catalog (Left) + Live Order Sidebar (Right) -->
@@ -476,18 +479,27 @@
                     <label class="block text-[11px] font-bold text-cafe-muted mb-1">Product Name *</label>
                     <input id="prod-name" type="text" required placeholder="e.g., Coke Mismo 295ml" class="w-full bg-cafe-bg border border-cafe-border rounded-xl px-3.5 py-2 text-sm text-cafe-text focus:outline-none focus:border-cafe-espresso">
                 </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-cafe-muted mb-1">Barcode / SKU (Optional)</label>
+                    <div class="flex items-center gap-1.5">
+                        <input id="prod-barcode" type="text" placeholder="Scan or type barcode..." class="flex-1 bg-cafe-bg border border-cafe-border rounded-xl px-3 py-2 text-xs text-cafe-text focus:outline-none focus:border-cafe-espresso">
+                        <button type="button" onclick="openBarcodeScannerModal('product')" class="px-3 py-2 rounded-xl bg-cafe-bg border border-cafe-border text-xs font-extrabold text-cafe-text hover:border-cafe-espresso tap-scale">
+                            📷 Scan
+                        </button>
+                    </div>
+                </div>
                 <div class="grid grid-cols-2 gap-2.5">
                     <div>
                         <label class="block text-[11px] font-bold text-cafe-muted mb-1">Category *</label>
-                        <input id="prod-category" type="text" list="category-suggestions" oninput="renderModalCategoryChips()" onfocus="renderModalCategoryChips()" autocomplete="off" required placeholder="e.g., Biscuit" class="w-full bg-cafe-bg border border-cafe-border rounded-xl px-3 py-2 text-xs text-cafe-text focus:outline-none focus:border-cafe-espresso">
+                        <input id="prod-category" type="text" list="category-suggestions" oninput="renderModalCategoryChips()" required placeholder="e.g., Drinks" class="w-full bg-cafe-bg border border-cafe-border rounded-xl px-3 py-2 text-xs text-cafe-text focus:outline-none focus:border-cafe-espresso">
                         <datalist id="category-suggestions"></datalist>
-                        <div id="prod-category-chips" class="flex flex-wrap gap-1.5 mt-1.5"></div>
                     </div>
                     <div>
-                        <label class="block text-[11px] font-bold text-cafe-muted mb-1">Stock Qty *</label>
+                        <label class="block text-[11px] font-bold text-cafe-muted mb-1">Initial / Current Stock *</label>
                         <input id="prod-stock" type="number" min="0" required placeholder="0" class="w-full bg-cafe-bg border border-cafe-border rounded-xl px-3 py-2 text-xs text-cafe-text focus:outline-none focus:border-cafe-espresso">
                     </div>
                 </div>
+                <div id="prod-category-chips" class="flex flex-wrap gap-1.5"></div>
                 <div class="grid grid-cols-2 gap-2.5">
                     <div>
                         <label class="block text-[11px] font-bold text-cafe-muted mb-1">Selling Price (₱) *</label>
@@ -722,6 +734,41 @@
 
     <!-- ==================== TOAST NOTIFICATION ==================== -->
     <div id="toast-box" class="hidden fixed top-5 left-1/2 -translate-x-1/2 z-[60] bg-cafe-espressoDark text-white text-xs font-extrabold px-4 py-2.5 rounded-full shadow-float animate-fade-up"></div>
+
+    <!-- ==================== MODAL: BARCODE SCANNER ==================== -->
+    <div id="barcode-scanner-modal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl p-5 shadow-float space-y-3.5 animate-fade-up">
+            <div class="flex items-center justify-between border-b border-cafe-border pb-2.5">
+                <div>
+                    <h3 class="text-base font-extrabold text-cafe-text">Barcode Scanner</h3>
+                    <p id="barcode-scanner-subtitle" class="text-xs text-cafe-muted">Point camera at barcode or type/scan code</p>
+                </div>
+                <button type="button" onclick="closeBarcodeScannerModal()" class="text-cafe-muted hover:text-cafe-text text-lg font-bold px-2">✕</button>
+            </div>
+
+            <div class="relative w-full h-52 rounded-2xl bg-black overflow-hidden flex items-center justify-center border border-cafe-border">
+                <video id="barcode-video" autoplay playsinline muted class="w-full h-full object-cover"></video>
+                <div id="barcode-camera-fallback" class="hidden text-center px-4 space-y-1">
+                    <p class="text-xs font-bold text-white">Camera preview unavailable</p>
+                    <p id="barcode-fallback-reason" class="text-[11px] text-white/75">Use a USB/Bluetooth scanner or enter barcode below.</p>
+                </div>
+                <div class="pointer-events-none absolute inset-x-8 top-1/2 -translate-y-1/2 h-0.5 bg-red-500/85 shadow"></div>
+            </div>
+
+            <form onsubmit="submitManualBarcode(event)" class="flex items-center gap-2">
+                <input id="barcode-manual-input" type="text" placeholder="Enter or scan barcode digits..." class="flex-1 bg-cafe-bg border border-cafe-border rounded-xl px-3.5 py-2 text-xs font-bold text-cafe-text focus:outline-none focus:border-cafe-espresso">
+                <button type="submit" class="px-4 py-2 rounded-xl bg-cafe-espresso text-white text-xs font-extrabold tap-scale">
+                    Apply
+                </button>
+            </form>
+
+            <div class="flex justify-end">
+                <button type="button" onclick="closeBarcodeScannerModal()" class="px-4 py-2 rounded-full bg-cafe-bg border border-cafe-border text-cafe-text text-xs font-bold tap-scale">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- ==================== APPLICATION LOGIC ==================== -->
     <script>
@@ -1820,7 +1867,7 @@
                             <div>
                                 <div class="flex items-center justify-between gap-1">
                                     <span class="text-[10px] font-bold uppercase tracking-wider text-cafe-muted truncate">${escapeHtml(p.category || 'General')}</span>
-                                    <button type="button" onclick="event.stopPropagation(); openProductModal('${escapeJsSingle(p.id)}')" title="Edit product" class="text-[11px] text-cafe-muted hover:text-cafe-text px-1">✎</button>
+                                    <button type="button" onpointerdown="event.stopPropagation(); cancelCardLongPress();" onclick="event.preventDefault(); event.stopPropagation(); openProductModal('${escapeJsSingle(p.id)}')" title="Edit product" aria-label="Edit ${escapeHtml(p.name)}" class="text-xs font-bold text-cafe-muted hover:text-cafe-text px-1.5 py-0.5 rounded-lg hover:bg-cafe-bg">✎</button>
                                 </div>
                                 <h4 class="text-xs sm:text-sm font-extrabold text-cafe-text line-clamp-2 mt-0.5 leading-snug">${escapeHtml(p.name)}</h4>
                             </div>
@@ -1847,6 +1894,7 @@
 
         function startCardLongPress(e, prodId) {
             if (e.button && e.button !== 0) return;
+            if (e.target && e.target.closest && e.target.closest('button')) return;
             longPressTriggered = false;
             const card = e.currentTarget;
             clearTimeout(longPressTimer);
@@ -1856,8 +1904,8 @@
                 setTimeout(() => {
                     if (card) card.classList.remove('long-pressing');
                     openProductModal(prodId);
-                }, 180);
-            }, 550);
+                }, 140);
+            }, 480);
         }
 
         function cancelCardLongPress() {
@@ -1865,6 +1913,7 @@
         }
 
         function handlePOSCardTap(e, prodId) {
+            if (e.target && e.target.closest && e.target.closest('button')) return;
             if (longPressTriggered) {
                 longPressTriggered = false;
                 return;
@@ -1936,23 +1985,32 @@
 
             if (prodId) {
                 const p = state.products.find(x => x.id === prodId);
-                if (!p) return;
+                if (!p) {
+                    showToast('Product not found.');
+                    return;
+                }
                 titleEl.textContent = 'Edit Product';
-                document.getElementById('prod-id').value = p.id;
-                document.getElementById('prod-name').value = p.name || '';
-                document.getElementById('prod-category').value = p.category || '';
-                document.getElementById('prod-stock').value = Number(p.stock) || 0;
-                document.getElementById('prod-price').value = Number(p.price) || 0;
-                document.getElementById('prod-cost').value = Number(p.cost) || 0;
-                document.getElementById('prod-low-stock').value = (p.lowStockThreshold !== null && p.lowStockThreshold !== undefined && p.lowStockThreshold !== '') ? Number(p.lowStockThreshold) : '';
-                document.getElementById('prod-image-data').value = p.imageData || '';
-                document.getElementById('prod-image-url').value = p.imageUrl || '';
+                const setVal = (elId, val) => {
+                    const el = document.getElementById(elId);
+                    if (el) el.value = val;
+                };
+                setVal('prod-id', p.id);
+                setVal('prod-name', p.name || '');
+                setVal('prod-barcode', p.barcode || '');
+                setVal('prod-category', p.category || '');
+                setVal('prod-stock', Number(p.stock) || 0);
+                setVal('prod-price', Number(p.price) || 0);
+                setVal('prod-cost', Number(p.cost) || 0);
+                setVal('prod-low-stock', (p.lowStockThreshold !== null && p.lowStockThreshold !== undefined && p.lowStockThreshold !== '') ? Number(p.lowStockThreshold) : '');
+                setVal('prod-image-data', p.imageData || '');
+                setVal('prod-image-url', p.imageUrl || '');
                 updateProductPhotoPreview(p.imageData || p.imageUrl || '');
-                delBtn.classList.remove('hidden');
+                if (delBtn) delBtn.classList.remove('hidden');
             } else {
                 titleEl.textContent = 'Add Product';
                 document.getElementById('prod-id').value = '';
                 document.getElementById('prod-name').value = '';
+                document.getElementById('prod-barcode').value = '';
                 document.getElementById('prod-category').value = '';
                 document.getElementById('prod-stock').value = '';
                 document.getElementById('prod-price').value = '';
@@ -2030,6 +2088,7 @@
             e.preventDefault();
             const id = document.getElementById('prod-id').value;
             const name = document.getElementById('prod-name').value.trim();
+            const barcode = (document.getElementById('prod-barcode')?.value || '').trim();
             const category = document.getElementById('prod-category').value.trim();
             const stock = Math.max(0, parseInt(document.getElementById('prod-stock').value, 10) || 0);
             const price = Math.max(0, parseFloat(document.getElementById('prod-price').value) || 0);
@@ -2052,6 +2111,7 @@
                     state.products[idx] = {
                         ...state.products[idx],
                         name,
+                        barcode,
                         category,
                         stock,
                         price,
@@ -2066,6 +2126,7 @@
                 state.products.push({
                     id: 'prod_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
                     name,
+                    barcode,
                     category,
                     stock,
                     price,
@@ -2733,12 +2794,17 @@
                         ${state.sales.length === 0
                             ? `<p class="text-xs text-cafe-muted py-2">No sales recorded yet.</p>`
                             : state.sales.slice(0, 15).map(s => `
-                                <div class="flex items-center justify-between bg-cafe-bg rounded-xl px-3 py-2 border border-cafe-border text-xs">
-                                    <div>
-                                        <p class="font-bold text-cafe-text">${escapeHtml((s.items || []).map(i => `${i.name}×${i.qty}`).join(', '))}</p>
+                                <div class="flex items-center justify-between gap-2 bg-cafe-bg rounded-xl px-3 py-2 border border-cafe-border text-xs">
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-cafe-text truncate">${escapeHtml((s.items || []).map(i => `${i.name}×${i.qty}`).join(', '))}</p>
                                         <p class="text-[10px] text-cafe-muted">${new Date(s.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • ${escapeHtml(s.paymentMethod)}${s.customerName ? ` (${escapeHtml(s.customerName)})` : ''}</p>
                                     </div>
-                                    <span class="font-extrabold text-cafe-green tabular-nums">${formatPHP(s.total)}</span>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <span class="font-extrabold text-cafe-green tabular-nums">${formatPHP(s.total)}</span>
+                                        <button type="button" onclick="voidSaleTransaction('${escapeJsSingle(s.id)}')" class="px-2.5 py-1 rounded-lg bg-cafe-redBg text-cafe-red text-[10px] font-extrabold hover:bg-red-200/70 tap-scale">
+                                            Void
+                                        </button>
+                                    </div>
                                 </div>
                             `).join('')}
                     </div>
@@ -2746,6 +2812,34 @@
             }
 
             container.innerHTML = html;
+        }
+
+        function voidSaleTransaction(saleId) {
+            try {
+                const saleIdx = (state.sales || []).findIndex(s => s.id === saleId);
+                if (saleIdx === -1) {
+                    showToast('Transaction not found.');
+                    return;
+                }
+
+                const sale = state.sales[saleIdx];
+                (sale.items || []).forEach(it => {
+                    const prod = state.products.find(p => p.id === it.productId);
+                    if (prod) {
+                        prod.stock = (Number(prod.stock) || 0) + (Number(it.qty) || 0);
+                    }
+                });
+
+                state.utang = (state.utang || []).filter(u => u.saleId !== saleId);
+                state.sales.splice(saleIdx, 1);
+
+                saveState();
+                renderAll();
+                showToast(`Voided transaction (${formatPHP(sale.total)}) & restored stock.`);
+            } catch (err) {
+                console.error('Failed to void transaction:', err);
+                showToast('Could not void transaction.');
+            }
         }
 
         // ==================== GCASH TAB ====================
@@ -2949,24 +3043,44 @@
         }
 
         function updateHeaderStoreName() {
-            const h1 = document.getElementById('header-store-name');
-            if (h1) h1.textContent = state.storeName || 'Sari-Sari';
+            const nameEl = document.getElementById('header-store-name');
+            if (nameEl) {
+                nameEl.textContent = state.storeName || 'Sari-Sari';
+            }
+            document.title = `${state.storeName || 'Sari-Sari Store'} — POS & Ledger`;
         }
 
-        function saveStoreName() {
-            const input = document.getElementById('store-name-input');
-            const val = (input ? input.value : '').trim();
-            if (!val) return;
-            state.storeName = val;
-            saveState();
-            updateHeaderStoreName();
-            showToast('Store name saved!');
+        function renderAll() {
+            if (isRendering) return;
+            isRendering = true;
+            try {
+                updateHeaderStoreName();
+                updateSyncStatusPill();
+                updateAlertBadges();
+                renderCartUI();
+
+                if (state.activeTab === 'pos') {
+                    renderHeroBanner();
+                    renderPOSCategories();
+                    renderPOSGrid();
+                } else if (state.activeTab === 'stock') {
+                    renderStockTab();
+                } else if (state.activeTab === 'utang') {
+                    renderLedgerTab();
+                } else if (state.activeTab === 'gcash') {
+                    renderGCashTab();
+                } else if (state.activeTab === 'reports') {
+                    renderReportsTab();
+                }
+            } finally {
+                isRendering = false;
+            }
         }
 
         function openStoreSettingsModal() {
             const modal = document.getElementById('store-settings-modal');
             const input = document.getElementById('modal-store-name-input');
-            if (input) input.value = state.storeName || 'Sari-Sari Store';
+            if (input) input.value = state.storeName || '';
             if (modal) modal.classList.remove('hidden');
         }
 
@@ -2977,78 +3091,59 @@
 
         function saveStoreNameFromModal() {
             const input = document.getElementById('modal-store-name-input');
-            const val = (input ? input.value : '').trim();
-            if (!val) return;
+            if (!input) return;
+            const val = input.value.trim();
+            if (!val) {
+                showToast('Please enter a store name.');
+                return;
+            }
             state.storeName = val;
             saveState();
             updateHeaderStoreName();
             renderReportsTab();
-            showToast('Store name updated!');
+            showToast('Store name saved!');
         }
 
-        function triggerResetToDefault(source) {
-            const btn = document.getElementById('reset-default-btn-modal');
-            if (!btn) return;
-            if (btn.dataset.armed === 'true') {
-                clearTimeout(resetConfirmTimer);
-                btn.dataset.armed = 'false';
-                btn.textContent = 'Reset Default';
-                localStorage.removeItem(STORAGE_KEY);
-                state = defaultState();
-                saveState();
-                closeStoreSettingsModal();
-                renderAll();
-                showToast('App reset to default!');
-            } else {
-                btn.dataset.armed = 'true';
-                btn.textContent = 'Tap Again to Confirm Reset';
-                clearTimeout(resetConfirmTimer);
-                resetConfirmTimer = setTimeout(() => {
-                    btn.dataset.armed = 'false';
-                    btn.textContent = 'Reset Default';
-                }, 3500);
+        function saveStoreName() {
+            const input = document.getElementById('store-name-input');
+            if (!input) return;
+            const val = input.value.trim();
+            if (!val) {
+                showToast('Please enter a store name.');
+                return;
             }
-        }
-
-        function loadStarterCatalog() {
-            let addedCount = 0;
-            FULL_SARI_SARI_CATALOG.forEach(starter => {
-                const exists = state.products.some(p => p.id === starter.id || p.name.toLowerCase() === starter.name.toLowerCase());
-                if (!exists) {
-                    state.products.push({ ...starter, stock: 0 });
-                    ensureCategorySaved(starter.category);
-                    addedCount++;
-                }
-            });
+            state.storeName = val;
             saveState();
-            closeStoreSettingsModal();
-            renderAll();
-            showToast(addedCount > 0 ? `Added ${addedCount} sari-sari items!` : 'All sari-sari items are already loaded.');
+            updateHeaderStoreName();
+            showToast('Store name saved!');
         }
 
         function openCloudModal() {
             updateSyncStatusPill();
-            document.getElementById('cloud-modal').classList.remove('hidden');
+            const modal = document.getElementById('cloud-modal');
+            if (modal) modal.classList.remove('hidden');
         }
 
         function closeCloudModal() {
-            document.getElementById('cloud-modal').classList.add('hidden');
+            const modal = document.getElementById('cloud-modal');
+            if (modal) modal.classList.add('hidden');
         }
 
         function exportBackupJSON() {
             try {
-                const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+                const dataStr = JSON.stringify(state, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = `sari-sari-backup-${todayISO()}.json`;
                 document.body.appendChild(a);
                 a.click();
-                a.remove();
+                document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-                showToast('Backup JSON downloaded!');
+                showToast('Backup JSON exported!');
             } catch (err) {
-                showToast('Export failed.');
+                showToast('Could not export backup.');
             }
         }
 
@@ -3059,12 +3154,16 @@
             reader.onload = function (ev) {
                 try {
                     const parsed = JSON.parse(ev.target.result);
+                    if (!parsed || typeof parsed !== 'object') {
+                        showToast('Invalid backup file.');
+                        return;
+                    }
                     state = {
                         ...defaultState(),
                         ...parsed,
-                        products: Array.isArray(parsed.products) ? parsed.products : [],
-                        categories: Array.isArray(parsed.categories) ? parsed.categories : [],
-                        paymentOptions: Array.isArray(parsed.paymentOptions) && parsed.paymentOptions.length ? parsed.paymentOptions : defaultState().paymentOptions,
+                        products: Array.isArray(parsed.products) ? parsed.products : state.products,
+                        categories: Array.isArray(parsed.categories) ? parsed.categories : state.categories,
+                        paymentOptions: Array.isArray(parsed.paymentOptions) && parsed.paymentOptions.length ? parsed.paymentOptions : state.paymentOptions,
                         cart: Array.isArray(parsed.cart) ? parsed.cart : [],
                         sales: Array.isArray(parsed.sales) ? parsed.sales : [],
                         utang: Array.isArray(parsed.utang) ? parsed.utang : [],
@@ -3074,47 +3173,277 @@
                     };
                     saveState();
                     renderAll();
-                    showToast('Backup restored successfully!');
+                    showToast('Backup imported successfully!');
                 } catch (err) {
-                    showToast('Invalid JSON backup file.');
+                    showToast('Error reading JSON backup.');
+                } finally {
+                    e.target.value = '';
                 }
             };
             reader.readAsText(file);
-            e.target.value = '';
         }
 
-        // ==================== MASTER RENDER ====================
-        function renderAll() {
-            if (isRendering) return;
-            isRendering = true;
-            try {
-                updateHeaderStoreName();
-                updateSyncStatusPill();
-                updateNavStyles();
-                updateAlertBadges();
-                renderHeroBanner();
-                renderPOSCategories();
-                renderPOSGrid();
-                renderCartUI();
-                renderStockTab();
-                renderLedgerTab();
-                renderGCashTab();
-                renderReportsTab();
-            } catch (err) {
-                console.error('Render error:', err);
-                const mainEl = document.getElementById('app-main');
-                if (mainEl) {
-                    mainEl.innerHTML = `
-                        <div class="bg-white rounded-3xl border border-cafe-border p-6 text-center space-y-3 shadow-cafe my-4">
-                            <p class="text-sm font-extrabold text-cafe-text">Display Recovery</p>
-                            <p class="text-xs text-cafe-muted">A temporary rendering issue occurred. Tap below to reload safely.</p>
-                            <button type="button" onclick="window.location.reload()" class="px-4 py-2 rounded-full bg-cafe-espresso text-white text-xs font-extrabold tap-scale">Reload App</button>
-                        </div>
-                    `;
-                }
-            } finally {
-                isRendering = false;
+        function triggerResetToDefault(source = 'modal') {
+            const btn = document.getElementById('reset-default-btn-modal');
+            if (!btn) return;
+            if (btn.dataset.armed !== '1') {
+                btn.dataset.armed = '1';
+                const origText = btn.textContent;
+                btn.textContent = 'Tap Again to Reset';
+                clearTimeout(resetConfirmTimer);
+                resetConfirmTimer = setTimeout(() => {
+                    btn.dataset.armed = '0';
+                    btn.textContent = origText;
+                }, 3000);
+                return;
             }
+            btn.dataset.armed = '0';
+            btn.textContent = 'Reset Default';
+            clearTimeout(resetConfirmTimer);
+            state = defaultState();
+            saveState();
+            closeStoreSettingsModal();
+            renderAll();
+            showToast('Reset to default catalog & state.');
+        }
+
+        function loadStarterCatalog() {
+            const existingIds = new Set(state.products.map(p => p.id));
+            const existingNames = new Set(state.products.map(p => (p.name || '').toLowerCase()));
+            let added = 0;
+            FULL_SARI_SARI_CATALOG.forEach(item => {
+                if (!existingIds.has(item.id) && !existingNames.has((item.name || '').toLowerCase())) {
+                    state.products.push({ ...item });
+                    ensureCategorySaved(item.category);
+                    added++;
+                }
+            });
+            saveState();
+            renderAll();
+            showToast(added > 0 ? `Loaded ${added} sari-sari items!` : 'All sari-sari items are already loaded.');
+        }
+
+        // ==================== BARCODE SCANNER ====================
+        let barcodeScanMode = 'pos';
+        let barcodeStream = null;
+        let barcodeRafId = null;
+        let barcodeDetector = null;
+        let zxingReader = null;
+        let zxingControls = null;
+        let zxingLoadPromise = null;
+        let hardwareBarcodeBuffer = '';
+        let hardwareBarcodeLastTime = 0;
+
+        function loadZXingLibrary() {
+            if (window.ZXingBrowser && window.ZXingBrowser.BrowserMultiFormatReader) {
+                return Promise.resolve(window.ZXingBrowser);
+            }
+            if (zxingLoadPromise) return zxingLoadPromise;
+            zxingLoadPromise = new Promise((resolve) => {
+                try {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/zxing-browser.min.js';
+                    script.async = true;
+                    script.onload = () => resolve(window.ZXingBrowser || null);
+                    script.onerror = () => resolve(null);
+                    document.head.appendChild(script);
+                } catch (e) {
+                    resolve(null);
+                }
+            });
+            return zxingLoadPromise;
+        }
+
+        async function openBarcodeScannerModal(mode = 'pos') {
+            barcodeScanMode = mode;
+            const modal = document.getElementById('barcode-scanner-modal');
+            const subEl = document.getElementById('barcode-scanner-subtitle');
+            const inputEl = document.getElementById('barcode-manual-input');
+            const fallbackEl = document.getElementById('barcode-camera-fallback');
+            const reasonEl = document.getElementById('barcode-fallback-reason');
+            if (!modal) return;
+
+            if (subEl) {
+                subEl.textContent = mode === 'product'
+                    ? 'Scan or enter barcode to fill Product Barcode'
+                    : 'Scan or enter barcode to add item to cart';
+            }
+            if (inputEl) inputEl.value = '';
+            if (reasonEl) reasonEl.textContent = 'Use a USB/Bluetooth scanner or enter barcode below.';
+            if (fallbackEl) fallbackEl.classList.add('hidden');
+
+            modal.classList.remove('hidden');
+            setTimeout(() => { if (inputEl) inputEl.focus(); }, 100);
+
+            await startBarcodeCameraLoop();
+        }
+
+        function closeBarcodeScannerModal() {
+            const modal = document.getElementById('barcode-scanner-modal');
+            if (modal) modal.classList.add('hidden');
+            stopBarcodeCameraLoop();
+        }
+
+        async function startBarcodeCameraLoop() {
+            stopBarcodeCameraLoop();
+            const video = document.getElementById('barcode-video');
+            const fallbackEl = document.getElementById('barcode-camera-fallback');
+            const reasonEl = document.getElementById('barcode-fallback-reason');
+
+            try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    if (reasonEl) reasonEl.textContent = 'Camera API unavailable in this browser/frame. Type or scan below.';
+                    if (fallbackEl) fallbackEl.classList.remove('hidden');
+                    return;
+                }
+
+                let stream = null;
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+                        audio: false
+                    });
+                } catch (camErr) {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                }
+
+                barcodeStream = stream;
+                if (video) {
+                    video.srcObject = barcodeStream;
+                    await video.play();
+                }
+
+                const hasNativeDetector = ('BarcodeDetector' in window);
+                if (hasNativeDetector) {
+                    try {
+                        barcodeDetector = new window.BarcodeDetector({
+                            formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'codabar', 'qr_code']
+                        });
+                    } catch (e) {
+                        try {
+                            barcodeDetector = new window.BarcodeDetector();
+                        } catch (e2) {
+                            barcodeDetector = null;
+                        }
+                    }
+                } else {
+                    barcodeDetector = null;
+                }
+
+                const zxing = await loadZXingLibrary();
+                if (!barcodeStream) return;
+
+                if (!barcodeDetector && zxing && zxing.BrowserMultiFormatReader && video) {
+                    try {
+                        zxingReader = new zxing.BrowserMultiFormatReader();
+                        zxingControls = await zxingReader.decodeFromVideoElement(video, (result) => {
+                            if (result && result.getText) {
+                                handleScannedBarcodeValue(String(result.getText()).trim());
+                            }
+                        });
+                        return;
+                    } catch (zxErr) {
+                        zxingReader = null;
+                        zxingControls = null;
+                    }
+                }
+
+                if (!barcodeDetector) {
+                    if (reasonEl) reasonEl.textContent = 'Browser has no built-in barcode decoder here. Type/scan barcode below.';
+                    if (fallbackEl) fallbackEl.classList.remove('hidden');
+                    return;
+                }
+
+                const tick = async () => {
+                    if (!barcodeStream) return;
+                    try {
+                        if (barcodeDetector && video && video.readyState >= 2) {
+                            const barcodes = await barcodeDetector.detect(video);
+                            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+                                handleScannedBarcodeValue(String(barcodes[0].rawValue).trim());
+                                return;
+                            }
+                        }
+                    } catch (err) {}
+                    barcodeRafId = requestAnimationFrame(tick);
+                };
+                barcodeRafId = requestAnimationFrame(tick);
+            } catch (err) {
+                if (reasonEl) {
+                    reasonEl.textContent = (err && err.name === 'NotAllowedError')
+                        ? 'Camera permission denied. Allow camera or type/scan barcode below.'
+                        : 'Camera preview unavailable. Use a scanner or type barcode below.';
+                }
+                if (fallbackEl) fallbackEl.classList.remove('hidden');
+            }
+        }
+
+        function stopBarcodeCameraLoop() {
+            if (barcodeRafId) {
+                cancelAnimationFrame(barcodeRafId);
+                barcodeRafId = null;
+            }
+            if (zxingControls && typeof zxingControls.stop === 'function') {
+                try { zxingControls.stop(); } catch (e) {}
+            }
+            zxingControls = null;
+            if (zxingReader && typeof zxingReader.reset === 'function') {
+                try { zxingReader.reset(); } catch (e) {}
+            }
+            zxingReader = null;
+            if (barcodeStream) {
+                try {
+                    barcodeStream.getTracks().forEach(t => t.stop());
+                } catch (e) {}
+                barcodeStream = null;
+            }
+            const video = document.getElementById('barcode-video');
+            if (video) {
+                video.srcObject = null;
+            }
+        }
+
+        function handleScannedBarcodeValue(rawCode) {
+            const code = String(rawCode || '').trim();
+            if (!code) return;
+
+            if (barcodeScanMode === 'product') {
+                const prodBarcodeInput = document.getElementById('prod-barcode');
+                if (prodBarcodeInput) prodBarcodeInput.value = code;
+                closeBarcodeScannerModal();
+                showToast(`Barcode set: ${code}`);
+                return;
+            }
+
+            const matched = state.products.find(p =>
+                String(p.barcode || '').trim().toLowerCase() === code.toLowerCase() ||
+                String(p.id || '').trim().toLowerCase() === code.toLowerCase()
+            );
+
+            closeBarcodeScannerModal();
+
+            if (matched) {
+                if ((Number(matched.stock) || 0) > 0) {
+                    addToCart(matched.id);
+                    showToast(`Scanned: ${matched.name}`);
+                } else {
+                    showToast(`${matched.name} is out of stock.`);
+                }
+            } else {
+                const searchInput = document.getElementById('pos-search');
+                if (searchInput) {
+                    searchInput.value = code;
+                    renderPOSGrid();
+                }
+                showToast(`Barcode ${code} not found—searched in catalog.`);
+            }
+        }
+
+        function submitManualBarcode(e) {
+            e.preventDefault();
+            const input = document.getElementById('barcode-manual-input');
+            if (!input) return;
+            handleScannedBarcodeValue(input.value);
         }
 
         document.addEventListener('keydown', (e) => {
@@ -3125,6 +3454,28 @@
                 closeStoreSettingsModal();
                 closeCloudModal();
                 closeStockAlertsModal();
+                closeBarcodeScannerModal();
+                return;
+            }
+
+            const activeTag = (document.activeElement && document.activeElement.tagName) || '';
+            const isTypingField = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT';
+            if (isTypingField && document.activeElement.id !== 'barcode-manual-input') return;
+
+            const now = Date.now();
+            if (now - hardwareBarcodeLastTime > 120) {
+                hardwareBarcodeBuffer = '';
+            }
+            hardwareBarcodeLastTime = now;
+
+            if (e.key === 'Enter') {
+                if (hardwareBarcodeBuffer.length >= 4 && document.activeElement.id !== 'barcode-manual-input') {
+                    const scanned = hardwareBarcodeBuffer;
+                    hardwareBarcodeBuffer = '';
+                    handleScannedBarcodeValue(scanned);
+                }
+            } else if (e.key.length === 1) {
+                hardwareBarcodeBuffer += e.key;
             }
         });
 
