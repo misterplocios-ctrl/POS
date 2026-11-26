@@ -2110,6 +2110,29 @@
             showToast('Product saved & synced!');
         }
 
+        function deleteCurrentProduct() {
+            const idVal = (document.getElementById('prod-id')?.value || '').trim();
+            if (!idVal) return;
+
+            const existing = (state.products || []).find(p => p.id === idVal);
+            const prodName = existing ? existing.name : 'Product';
+
+            state.products = (state.products || []).filter(p => p.id !== idVal);
+            state.cart = (state.cart || []).filter(c => c.productId !== idVal);
+            state.categories = Array.from(new Set([
+                ...(state.products || []).map(p => (p.category || '').trim()).filter(Boolean)
+            ]));
+            if (state.selectedCategory && state.selectedCategory !== 'All' && !state.categories.includes(state.selectedCategory)) {
+                state.selectedCategory = 'All';
+            }
+
+            saveState();
+            broadcastTransactionSync(false);
+            closeProductModal();
+            renderAll();
+            showToast(`Deleted "${prodName}"!`);
+        }
+
         function updateSyncStatusPill() {
             const dot = document.getElementById('sync-dot');
             const label = document.getElementById('sync-label');
